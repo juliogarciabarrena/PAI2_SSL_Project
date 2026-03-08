@@ -1,0 +1,173 @@
+import java.io.*;
+import java.net.SocketException;
+import javax.net.ssl.SSLSocket;
+
+/**
+ * ClientHandler — gestiona la comunicación con un cliente SSL en su propio hilo.
+ *
+ * Protocolo de mensajes (texto plano sobre canal SSL cifrado):
+ *
+ *   Cliente → Servidor              Servidor → Cliente
+ *   ─────────────────────────────   ──────────────────────────────────
+ *   REGISTER|usuario|contraseña  →  OK|Usuario registrado
+ *                                   ERROR|Usuario ya existe
+ *   LOGIN|usuario|contraseña     →  OK|Login correcto
+ *                                   ERROR|Credenciales incorrectas
+ *                                   ERROR|Cuenta bloqueada (Xs restantes)
+ *   MSG|texto (máx. 144 chars)   →  OK|Mensaje recibido (total: N)
+ *                                   ERROR|No autenticado
+ *   LOGOUT                       →  OK|Sesión cerrada
+ *
+ * Soporta 300 clientes concurrentes (cada uno ejecuta en un Thread del pool).
+ */
+public class ClientHandler implements Runnable {
+
+    private final SSLSocket socket;
+    private final AuthManager auth;
+    private final DatabaseManager db;
+
+    // Usuario autenticado en esta sesión (null si no ha hecho login)
+    private String loggedUser = null;
+
+    public ClientHandler(SSLSocket socket, AuthManager auth, DatabaseManager db) {
+        this.socket = socket;
+        this.auth   = auth;
+        this.db     = db;
+    }
+
+    @Override
+    public void run() {
+        String clientAddr = socket.getRemoteSocketAddress().toString();
+        System.out.println("[Server] Cliente conectado: " + clientAddr);
+
+        try (BufferedReader in  = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+             PrintWriter    out = new PrintWriter(new OutputStreamWriter(socket.getOutputStream()), true)) {
+
+            String line;
+            while ((line = in.readLine()) != null) {
+                String response = handleCommand(line.trim());
+                out.println(response);
+
+                // Si fue un LOGOUT cerramos el bucle
+                if (line.trim().equalsIgnoreCase("LOGOUT")) break;
+            }
+
+        } catch (SocketException e) {
+            System.out.println("[Server] Cliente desconectado abruptamente: " + clientAddr);
+        } catch (IOException e) {
+            System.err.println("[Server] Error de IO con " + clientAddr + ": " + e.getMessage());
+        } finally {
+            // Limpiar sesión si el cliente se desconecta sin hacer LOGOUT
+            if (loggedUser != null) {
+                auth.logout(loggedUser);
+                System.out.println("[Server] Sesión forzada cerrada para: " + loggedUser);
+            }
+            try { socket.close(); } catch (IOException ignored) {}
+            System.out.println("[Server] Conexión cerrada: " + clientAddr);
+        }
+    }
+
+    // =========================================================================
+    // Procesamiento de comandos
+    // =========================================================================
+
+    private String handleCommand(String line) {
+        if (line.isEmpty()) return "ERROR|Comando vacío";
+
+        // Dividir comando y parámetros (máximo 3 partes)
+        String[] parts = line.split("\\|", 3);
+        String cmd = parts[0].toUpperCase();
+
+        return switch (cmd) {
+            case "REGISTER" -> handleRegister(parts);
+            case "LOGIN"    -> handleLogin(parts);
+            case "MSG"      -> handleMessage(parts);
+            case "LOGOUT"   -> handleLogout();
+            default         -> "ERROR|Comando desconocido: " + cmd;
+        };
+    }
+
+    // -------------------------------------------------------------------------
+    // REGISTER|usuario|contraseña
+    // -------------------------------------------------------------------------
+    private String handleRegister(String[] parts) {
+        if (parts.length < 3) return "ERROR|Formato incorrecto. Uso: REGISTER|usuario|contraseña";
+
+        String username = parts[1].trim();
+        String password = parts[2].trim();
+
+        AuthManager.RegisterResult result = auth.register(username, password);
+        return switch (result) {
+            case SUCCESS        -> "OK|Usuario registrado exitosamente";
+            case ALREADY_EXISTS -> "ERROR|Usuario ya registrado. Elige otro nombre.";
+            case WEAK_PASSWORD  -> "ERROR|Contraseña demasiado corta (mínimo 4 caracteres)";
+            case INVALID_INPUT  -> "ERROR|Nombre de usuario inválido";
+        };
+    }
+
+    // -------------------------------------------------------------------------
+    // LOGIN|usuario|contraseña
+    // -------------------------------------------------------------------------
+    private String handleLogin(String[] parts) {
+        if (parts.length < 3) return "ERROR|Formato incorrecto. Uso: LOGIN|usuario|contraseña";
+
+        if (loggedUser != null) {
+            return "ERROR|Ya tienes una sesión activa como: " + loggedUser;
+        }
+
+        String username = parts[1].trim();
+        String password = parts[2].trim();
+
+        AuthManager.LoginResult result = auth.login(username, password);
+        return switch (result) {
+            case SUCCESS -> {
+                loggedUser = username;
+                yield "OK|Inicio de sesión correcto. Bienvenido, " + username + "!";
+            }
+            case INVALID_CREDENTIALS -> "ERROR|Credenciales incorrectas. Inicio de sesión fallido.";
+            case ACCOUNT_LOCKED -> {
+                long secs = db.getLockRemainingSeconds(username);
+                yield "ERROR|Cuenta bloqueada por múltiples intentos fallidos. Espera " + secs + " segundos.";
+            }
+        };
+    }
+
+    // -------------------------------------------------------------------------
+    // MSG|texto
+    // -------------------------------------------------------------------------
+    private String handleMessage(String[] parts) {
+        if (loggedUser == null) {
+            return "ERROR|No autenticado. Debes hacer LOGIN primero.";
+        }
+        if (parts.length < 2) return "ERROR|Formato incorrecto. Uso: MSG|tu mensaje";
+
+        String content = parts[1].trim();
+        if (content.isEmpty()) return "ERROR|El mensaje no puede estar vacío";
+
+        // Limitar a 144 caracteres (RF-6)
+        if (content.length() > 144) {
+            content = content.substring(0, 144);
+        }
+
+        boolean saved = db.saveMessage(loggedUser, content);
+        if (saved) {
+            int total = db.getMessageCount(loggedUser);
+            return "OK|Mensaje recibido y almacenado correctamente. Total mensajes: " + total;
+        } else {
+            return "ERROR|No se pudo almacenar el mensaje";
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // LOGOUT
+    // -------------------------------------------------------------------------
+    private String handleLogout() {
+        if (loggedUser == null) {
+            return "ERROR|No hay sesión activa";
+        }
+        auth.logout(loggedUser);
+        String user = loggedUser;
+        loggedUser = null;
+        return "OK|Sesión cerrada correctamente. Hasta luego, " + user + "!";
+    }
+}
