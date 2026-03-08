@@ -36,7 +36,7 @@ public class ServidorSSL {
         AuthManager     auth = new AuthManager(db);
 
         // ── Pool de hilos para 300 clientes concurrentes ─────────────────────
-        ExecutorService threadPool = Executors.newFixedThreadPool(MAX_CONCURRENT_CLIENTS);
+        ExecutorService threadPool = Executors.newCachedThreadPool();
 
         // ── Crear SSLServerSocket ─────────────────────────────────────────────
         SSLServerSocketFactory factory =
