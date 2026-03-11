@@ -26,18 +26,6 @@ if not exist "%JAR%" (
     exit /b 1
 )
 
-REM -----------------------------------------------------------------------------
-REM Limpiar base de datos anterior
-REM -----------------------------------------------------------------------------
-if exist "%DB%" (
-    echo [Setup] Eliminando base de datos anterior: %DB%
-    del /f "%DB%"
-    echo [Setup] Base de datos eliminada. Se creara una nueva al arrancar.
-) else (
-    echo [Setup] No existe base de datos previa. Se creara una nueva.
-)
-echo.
-
 echo Arrancando servidor VPN SSL...
 echo   Keystore : %KEYSTORE%
 echo   Puerto   : 8443
