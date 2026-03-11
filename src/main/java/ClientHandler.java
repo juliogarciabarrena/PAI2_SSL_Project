@@ -1,5 +1,6 @@
 import java.io.*;
 import java.net.SocketException;
+import java.util.List;
 
 import javax.net.ssl.SSLSession;
 import javax.net.ssl.SSLSocket;
@@ -98,6 +99,7 @@ public class ClientHandler implements Runnable {
             case "REGISTER" -> handleRegister(parts);
             case "LOGIN"    -> handleLogin(parts);
             case "MSG"      -> handleMessage(parts);
+            case "HISTORY"  -> handleHistory(parts);
             case "LOGOUT"   -> handleLogout();
             default         -> "ERROR|Comando desconocido: " + cmd;
         };
@@ -172,6 +174,38 @@ public class ClientHandler implements Runnable {
         } else {
             return "ERROR|No se pudo almacenar el mensaje";
         }
+    }
+
+        // -------------------------------------------------------------------------
+    // MSG|texto
+    // -------------------------------------------------------------------------
+    private String handleHistory(String[] parts) {
+        int limit = 10; 
+        List<String> history; 
+        if (loggedUser == null) {
+            return "ERROR|No autenticado. Debes hacer LOGIN primero.";
+        }
+        if (parts.length < 2) {
+            history = db.getLastMessagesGeneral(limit);
+
+        } else if (parts.length == 2) {
+            limit = parts[1].trim().isEmpty() ? 10 : Integer.parseInt(parts[1].trim());
+             history = db.getLastMessagesGeneral(limit);
+        } else if (parts.length == 3) {
+            limit = parts[2].trim().isEmpty() ? 10 : Integer.parseInt(parts[2].trim());
+            history = db.getLastMessages(parts[1].trim(), limit);
+        } else {
+            return "ERROR|Formato incorrecto. Uso: HISTORY|[número de mensajes]";
+        }
+
+        // Devolver el número de mensajes seguido de cada uno
+        // Formato: HISTORY_COUNT|N seguido de N líneas con los mensajes
+        StringBuilder res = new StringBuilder("HISTORY_COUNT|" + history.size());
+        for (String msg : history) {
+            res.append("\n").append(msg);
+        }
+
+        return res.toString();
     }
 
     // -------------------------------------------------------------------------
