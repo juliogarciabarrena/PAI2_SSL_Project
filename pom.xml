@@ -41,38 +41,89 @@
     <build>
         <plugins>
 
-            <!-- Plugin para empaquetar el servidor como jar ejecutable -->
+            <!-- ============================================================ -->
+            <!-- maven-assembly-plugin                                         -->
+            <!-- Genera tres JARs fat (con dependencias incluidas) en target/: -->
+            <!--   servidor-ssl.jar      → ServidorSSL          (puerto 8443) -->
+            <!--   servidor-plain.jar    → ServidorPlain         (puerto 8080) -->
+            <!--   performance-test.jar  → PerformanceTestComparativa          -->
+            <!-- ============================================================ -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <version>3.6.0</version>
+
+                <executions>
+
+                    <!-- JAR 1: ServidorSSL -->
+                    <execution>
+                        <id>jar-servidor-ssl</id>
+                        <phase>package</phase>
+                        <goals><goal>single</goal></goals>
+                        <configuration>
+                            <finalName>servidor-ssl</finalName>
+                            <appendAssemblyId>false</appendAssemblyId>
+                            <archive>
+                                <manifest>
+                                    <mainClass>ServidorSSL</mainClass>
+                                </manifest>
+                            </archive>
+                            <descriptorRefs>
+                                <descriptorRef>jar-with-dependencies</descriptorRef>
+                            </descriptorRefs>
+                        </configuration>
+                    </execution>
+
+                    <!-- JAR 2: ServidorPlain -->
+                    <execution>
+                        <id>jar-servidor-plain</id>
+                        <phase>package</phase>
+                        <goals><goal>single</goal></goals>
+                        <configuration>
+                            <finalName>servidor-plain</finalName>
+                            <appendAssemblyId>false</appendAssemblyId>
+                            <archive>
+                                <manifest>
+                                    <mainClass>ServidorPlain</mainClass>
+                                </manifest>
+                            </archive>
+                            <descriptorRefs>
+                                <descriptorRef>jar-with-dependencies</descriptorRef>
+                            </descriptorRefs>
+                        </configuration>
+                    </execution>
+
+                    <!-- JAR 3: PerformanceTestComparativa -->
+                    <execution>
+                        <id>jar-performance-test</id>
+                        <phase>package</phase>
+                        <goals><goal>single</goal></goals>
+                        <configuration>
+                            <finalName>performance-test</finalName>
+                            <appendAssemblyId>false</appendAssemblyId>
+                            <archive>
+                                <manifest>
+                                    <mainClass>PerformanceTestComparativa</mainClass>
+                                </manifest>
+                            </archive>
+                            <descriptorRefs>
+                                <descriptorRef>jar-with-dependencies</descriptorRef>
+                            </descriptorRefs>
+                        </configuration>
+                    </execution>
+
+                </executions>
+            </plugin>
+
+            <!-- Desactivar el JAR default para que no genere un cuarto JAR sin mainClass -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
                 <version>3.3.0</version>
-                <configuration>
-                    <archive>
-                        <manifest>
-                            <mainClass>ServidorSSL</mainClass>
-                            <addClasspath>true</addClasspath>
-                            <classpathPrefix>dependency-jars/</classpathPrefix>
-                        </manifest>
-                    </archive>
-                    <finalName>servidor-ssl</finalName>
-                </configuration>
-            </plugin>
-
-            <!-- Copia las dependencias junto al jar final -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-dependency-plugin</artifactId>
-                <version>3.6.1</version>
                 <executions>
                     <execution>
-                        <id>copy-dependencies</id>
-                        <phase>package</phase>
-                        <goals><goal>copy-dependencies</goal></goals>
-                        <configuration>
-                            <outputDirectory>
-                                ${project.build.directory}/dependency-jars
-                            </outputDirectory>
-                        </configuration>
+                        <id>default-jar</id>
+                        <phase>none</phase>
                     </execution>
                 </executions>
             </plugin>
