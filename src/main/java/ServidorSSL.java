@@ -86,17 +86,7 @@ public class ServidorSSL {
             try {
                 SSLSocket clientSocket = (SSLSocket) serverSocket.accept();
 
-                // Verificar negociación TLS antes de aceptar el cliente
-                clientSocket.startHandshake();
-
-                // Log de la sesión TLS establecida
-                SSLSession session = clientSocket.getSession();
-                System.out.printf("[Server] Conexión TLS: protocolo=%s  cipher=%s  cliente=%s%n",
-                        session.getProtocol(),
-                        session.getCipherSuite(),
-                        clientSocket.getRemoteSocketAddress());
-
-                // Delegar al pool de hilos
+                // ya no hacemos handshake aquí: lo realizará el ClientHandler en su hilo
                 threadPool.execute(new ClientHandler(clientSocket, auth, db));
 
             } catch (SSLException e) {

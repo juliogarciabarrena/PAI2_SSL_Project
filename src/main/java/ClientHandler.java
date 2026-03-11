@@ -1,5 +1,7 @@
 import java.io.*;
 import java.net.SocketException;
+
+import javax.net.ssl.SSLSession;
 import javax.net.ssl.SSLSocket;
 
 /**
@@ -39,6 +41,20 @@ public class ClientHandler implements Runnable {
     public void run() {
         String clientAddr = socket.getRemoteSocketAddress().toString();
         System.out.println("[Server] Cliente conectado: " + clientAddr);
+
+        // el handshake se realizará aquí en el hilo de ejecución del cliente
+        try {
+            socket.startHandshake();
+            SSLSession session = socket.getSession();
+            System.out.printf("[Server] Conexión TLS: protocolo=%s  cipher=%s  cliente=%s%n",
+                    session.getProtocol(),
+                    session.getCipherSuite(),
+                    clientAddr);
+        } catch (IOException e) {
+            System.err.println("[Server] Falló handshake inicial con " + clientAddr + ": " + e.getMessage());
+            try { socket.close(); } catch (IOException ignored) {}
+            return;
+        }
 
         try (BufferedReader in  = new BufferedReader(new InputStreamReader(socket.getInputStream()));
              PrintWriter    out = new PrintWriter(new OutputStreamWriter(socket.getOutputStream()), true)) {
