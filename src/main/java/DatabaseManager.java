@@ -340,11 +340,47 @@ public class DatabaseManager {
         return msgs;
     }
 
+     public List<String> getLastMessagesGeneral(int limit) {
+        List<String> msgs = new ArrayList<>();
+
+        String sql = "SELECT content, timestamp FROM messages ORDER BY id DESC LIMIT ?;";
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, limit);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    msgs.add("[" + rs.getString("timestamp") + "] " + rs.getString("content"));
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("[DB] Error al obtener mensajes: " + e.getMessage());
+        }
+        return msgs;
+    }
+
+
     // -------------------------------------------------------------------------
     // Utilidades
     // -------------------------------------------------------------------------
 
     private Connection getConnection() throws SQLException {
         return DriverManager.getConnection(DB_URL);
+    }
+
+    public int getUserIdByUsername(String trim) {
+
+        String sql = "SELECT id FROM users WHERE username = ?;";
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, trim);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt("id");
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("[DB] Error al obtener ID de usuario: " + e.getMessage());
+        }
+        return -1;
     }
 }

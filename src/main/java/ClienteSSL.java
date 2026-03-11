@@ -139,11 +139,15 @@ public class ClienteSSL {
                     handleRegisterInteractive(input.substring(9));
                 } else if (input.startsWith("login ")) {
                     handleLoginInteractive(input.substring(6));
-                } else if (input.startsWith("send ") || input.startsWith("msg ")) {
+                } else if (input.startsWith("send ")) {
                     String msg = input.startsWith("send ")
                             ? input.substring(5)
                             : input.substring(4);
                     handleMessage(msg);
+
+                }else if (input.startsWith("history")) {
+                    String args = input.length() > 7 ? input.substring(8) : "";
+                    handleHistory(args.split(" "));
                 } else if (input.equalsIgnoreCase("logout")) {
                     handleLogout();
                 } else if (input.equalsIgnoreCase("status")) {
@@ -165,6 +169,61 @@ public class ClienteSSL {
     // =========================================================================
     // Manejadores de comandos
     // =========================================================================
+
+    private void handleHistory(String[] split) {
+        if (split.length == 0) {
+            System.out.println("📋 Uso: history [username] [limit]\n");
+            return;
+        }
+
+        if (loggedUser == null) {
+            System.out.println("❌ No autenticado. Debes hacer LOGIN primero.\n");
+            return;
+        }
+
+        String cmd;
+        if (split.length == 1) {
+            cmd = String.format("HISTORY|%s", split[0]);
+        } else if (split.length == 2) {
+            cmd = String.format("HISTORY|%s|%s", split[0], split[1]);
+        } else {
+            System.out.println("❌ Formato incorrecto. Uso: history [username] [limit]\n");
+            return;
+        }
+
+        // Enviar comando y leer respuesta multi-línea
+        try {
+            out.println(cmd);
+            String firstLine = in.readLine();
+            
+            if (firstLine == null) {
+                System.out.println("⚠️  Desconexión inesperada.\n");
+                return;
+            }
+
+            if (firstLine.startsWith("HISTORY_COUNT|")) {
+                // Extraer número de mensajes
+                String[] countParts = firstLine.split("\\|");
+                int count = Integer.parseInt(countParts[1]);
+
+                // Leer los siguientes 'count' mensajes
+                System.out.println("📋 Historial (" + count + " mensaje" + (count != 1 ? "s" : "") + "):");
+                for (int i = 0; i < count; i++) {
+                    String msg = in.readLine();
+                    if (msg != null) {
+                        System.out.println("  " + msg);
+                    }
+                }
+                System.out.println();
+            } else if (firstLine.startsWith("ERROR|")) {
+                System.out.println("❌ " + firstLine.substring(6) + "\n");
+            } else {
+                System.out.println("⚠️  Respuesta inesperada: " + firstLine + "\n");
+            }
+        } catch (IOException e) {
+            System.err.println("[Cliente] ❌ Error al obtener historial: " + e.getMessage());
+        }
+    }
 
     /**
      * RF-1: Maneja el registro de un nuevo usuario.
@@ -327,7 +386,7 @@ public class ClienteSSL {
         System.out.println("║                                                              ║");
         System.out.println("║  MENSAJES:                                                   ║");
         System.out.println("║    send <mensaje>                    - Enviar mensaje         ║");
-        System.out.println("║    msg <mensaje>                     - Alias para send        ║");
+        System.out.println("║    history <username> <limit>        - Ver historial de mensajes  ║");
         System.out.println("║                                      (máximo 144 caracteres)  ║");
         System.out.println("║                                                              ║");
         System.out.println("║  UTILIDADES:                                                 ║");
