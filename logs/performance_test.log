@@ -7,12 +7,12 @@
 
 [Test] Iniciando 300 conexiones simultáneas...
 
-[Test] ? 50/300 conexiones establecidas (16.7%)
-[Test] ? 100/300 conexiones establecidas (33.3%)
-[Test] ? 150/300 conexiones establecidas (50.0%)
-[Test] ? 200/300 conexiones establecidas (66.7%)
-[Test] ? 250/300 conexiones establecidas (83.3%)
-[Test] ? 300/300 conexiones establecidas (100.0%)
+[Test] ? 50/300 conexiones establecidas (16,7%)
+[Test] ? 100/300 conexiones establecidas (33,3%)
+[Test] ? 150/300 conexiones establecidas (50,0%)
+[Test] ? 200/300 conexiones establecidas (66,7%)
+[Test] ? 250/300 conexiones establecidas (83,7%)
+[Test] ? 300/300 conexiones establecidas (100,0%)
 
 ???????????????????????????????????????????????????????????????
 ?              RESULTADOS DEL TEST DE CONEXIONES               ?
@@ -22,15 +22,15 @@
   • Conexiones solicitadas:    300
   • Conexiones exitosas:       300 ?
   • Conexiones fallidas:       0 ? (ninguna, pues reintentamos hasta conseguir la 300)
-  • Reintentos fallidos previos: 271
-  • Tasa de éxito:             100.0%
+  • Reintentos fallidos previos: 215
+  • Tasa de éxito:             100,0%
 
 ??  TIEMPOS:
-  • Tiempo total:              2.81 segundos
-  • Handshake promedio:        2003.68 ms
+  • Tiempo total:              2,94 segundos
+  • Handshake promedio:        1480,00 ms
 
 ? THROUGHPUT:
-  • Conexiones/segundo:        106.65
+  • Conexiones/segundo:        102,15
 
 ? VERIFICACIÓN:
   ? ¡ÉXITO! Todas las 300 conexiones simultáneas fueron exitosas

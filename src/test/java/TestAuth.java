@@ -1,5 +1,6 @@
-import java.io.File;
-import java.lang.reflect.Method;
+import java.io.*;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 /**
  * TestAuth — Tests unitarios de autenticación y seguridad de BBDD.
@@ -25,84 +26,157 @@ public class TestAuth {
     // Base de datos temporal para tests (se elimina al final)
     private static final String TEST_DB = "test_vpn.db";
 
+    // Directorio y fichero de log
+    private static final String LOGS_DIR = "logs";
+    private static final String LOG_FILE = LOGS_DIR + File.separator + "test_auth_"
+            + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HHmm"))
+            + ".log";
+
+    // =========================================================================
+    // TeeOutputStream — escribe simultáneamente en dos streams
+    // =========================================================================
+
+    private static class TeeOutputStream extends OutputStream {
+        private final OutputStream primary;   // consola original
+        private final OutputStream secondary; // fichero de log
+
+        TeeOutputStream(OutputStream primary, OutputStream secondary) {
+            this.primary   = primary;
+            this.secondary = secondary;
+        }
+
+        @Override
+        public void write(int b) throws IOException {
+            primary.write(b);
+            secondary.write(b);
+        }
+
+        @Override
+        public void write(byte[] b, int off, int len) throws IOException {
+            primary.write(b, off, len);
+            secondary.write(b, off, len);
+        }
+
+        @Override
+        public void flush() throws IOException {
+            primary.flush();
+            secondary.flush();
+        }
+
+        @Override
+        public void close() throws IOException {
+            primary.close();
+            secondary.close();
+        }
+    }
+
+    // =========================================================================
+    // MAIN
+    // =========================================================================
+
     public static void main(String[] args) {
-        System.out.println("╔══════════════════════════════════════════════╗");
-        System.out.println("║        Tests Unitarios — AuthManager         ║");
-        System.out.println("╚══════════════════════════════════════════════╝\n");
 
-        // Apuntar a base de datos de test (evitar contaminar la producción)
-        System.setProperty("test.db", TEST_DB);
+        // ── Preparar directorio y fichero de log ─────────────────────────────
+        new File(LOGS_DIR).mkdirs();
+        PrintStream originalOut = System.out;
+        PrintStream originalErr = System.err;
 
-        try {
-            DatabaseManager db   = new DatabaseManager();
-            AuthManager     auth = new AuthManager(db);
+        try (FileOutputStream logFile = new FileOutputStream(LOG_FILE, true)) {
 
-            // ─────────────────────────────────────────────────────────────────
-            // RS-2: BCrypt
-            // ─────────────────────────────────────────────────────────────────
-            System.out.println("── BCrypt ──────────────────────────────────────");
+            // Redirigir System.out y System.err al TeeOutputStream
+            PrintStream tee = new PrintStream(new TeeOutputStream(originalOut, logFile), true);
+            System.setOut(tee);
+            System.setErr(tee);
 
-            testBCryptHashNotPlainText();
-            testBCryptTwoHashesDiffer();
-            testBCryptVerifyCorrect();
-            testBCryptVerifyWrong();
+            System.out.println("╔══════════════════════════════════════════════╗");
+            System.out.println("║        Tests Unitarios — AuthManager         ║");
+            System.out.println("╚══════════════════════════════════════════════╝");
+            System.out.println("[Log] Guardando resultados en: " + LOG_FILE + "\n");
 
-            // ─────────────────────────────────────────────────────────────────
-            // RF-1: Registro
-            // ─────────────────────────────────────────────────────────────────
-            System.out.println("\n── Registro de usuarios ────────────────────────");
+            // Apuntar a base de datos de test (evitar contaminar la producción)
+            System.setProperty("test.db", TEST_DB);
 
-            testRegisterSuccess(auth);
-            testRegisterDuplicate(auth);
-            testRegisterWeakPassword(auth);
-            testRegisterEmptyUsername(auth);
+            try {
+                DatabaseManager db   = new DatabaseManager();
+                AuthManager     auth = new AuthManager(db);
 
-            // ─────────────────────────────────────────────────────────────────
-            // RF-2 / RF-3: Login y verificación de credenciales
-            // ─────────────────────────────────────────────────────────────────
-            System.out.println("\n── Login y verificación ────────────────────────");
+                // ─────────────────────────────────────────────────────────────
+                // RS-2: BCrypt
+                // ─────────────────────────────────────────────────────────────
+                System.out.println("── BCrypt ──────────────────────────────────────");
 
-            testLoginSuccess(auth);
-            testLoginWrongPassword(auth);
-            testLoginNonExistentUser(auth);
+                testBCryptHashNotPlainText();
+                testBCryptTwoHashesDiffer();
+                testBCryptVerifyCorrect();
+                testBCryptVerifyWrong();
 
-            // ─────────────────────────────────────────────────────────────────
-            // RF-4: Logout
-            // ─────────────────────────────────────────────────────────────────
-            System.out.println("\n── Logout ──────────────────────────────────────");
+                // ─────────────────────────────────────────────────────────────
+                // RF-1: Registro
+                // ─────────────────────────────────────────────────────────────
+                System.out.println("\n── Registro de usuarios ────────────────────────");
 
-            testLogout(auth);
-            testLogoutWithoutLogin(auth);
+                testRegisterSuccess(auth);
+                testRegisterDuplicate(auth);
+                testRegisterWeakPassword(auth);
+                testRegisterEmptyUsername(auth);
 
-            // ─────────────────────────────────────────────────────────────────
-            // RF-5: Usuarios pre-registrados
-            // ─────────────────────────────────────────────────────────────────
-            System.out.println("\n── Usuarios pre-registrados ────────────────────");
+                // ─────────────────────────────────────────────────────────────
+                // RF-2 / RF-3: Login y verificación de credenciales
+                // ─────────────────────────────────────────────────────────────
+                System.out.println("\n── Login y verificación ────────────────────────");
 
-            testPreregisteredUsersExist(db);
-            testPreregisteredUserCanLogin(auth);
+                testLoginSuccess(auth);
+                testLoginWrongPassword(auth);
+                testLoginNonExistentUser(auth);
 
-            // ─────────────────────────────────────────────────────────────────
-            // RS-3: Anti-BruteForce
-            // ─────────────────────────────────────────────────────────────────
-            System.out.println("\n── Anti-BruteForce ─────────────────────────────");
+                // ─────────────────────────────────────────────────────────────
+                // RF-4: Logout
+                // ─────────────────────────────────────────────────────────────
+                System.out.println("\n── Logout ──────────────────────────────────────");
 
-            testBruteForceBlock(auth, db);
-            testBruteForceResetOnSuccess(auth, db);
+                testLogout(auth);
+                testLogoutWithoutLogin(auth);
 
-            // ─────────────────────────────────────────────────────────────────
-            // BBDD: Mensajes
-            // ─────────────────────────────────────────────────────────────────
-            System.out.println("\n── Persistencia de mensajes ────────────────────");
+                // ─────────────────────────────────────────────────────────────
+                // RF-5: Usuarios pre-registrados
+                // ─────────────────────────────────────────────────────────────
+                System.out.println("\n── Usuarios pre-registrados ────────────────────");
 
-            testSaveMessage(auth, db);
-            testMessageTruncation(db);
-            testMessageCount(db);
+                testPreregisteredUsersExist(db);
+                testPreregisteredUserCanLogin(auth);
 
+                // ─────────────────────────────────────────────────────────────
+                // RS-3: Anti-BruteForce
+                // ─────────────────────────────────────────────────────────────
+                System.out.println("\n── Anti-BruteForce ─────────────────────────────");
+
+                testBruteForceBlock(auth, db);
+                testBruteForceResetOnSuccess(auth, db);
+
+                // ─────────────────────────────────────────────────────────────
+                // BBDD: Mensajes
+                // ─────────────────────────────────────────────────────────────
+                System.out.println("\n── Persistencia de mensajes ────────────────────");
+
+                testSaveMessage(auth, db);
+                testMessageTruncation(db);
+                testMessageCount(db);
+
+            } finally {
+                new File(TEST_DB).delete();
+                printSummary();
+            }
+
+        } catch (IOException e) {
+            // Si falla la creación del log, restaurar streams originales y avisar
+            System.setOut(originalOut);
+            System.setErr(originalErr);
+            System.err.println("[Log] ERROR: No se pudo crear el fichero de log: " + e.getMessage());
+            System.err.println("[Log] El test continuará sin guardar log.");
         } finally {
-            // Eliminar base de datos de test
-            new File(TEST_DB).delete();
-            printSummary();
+            // Restaurar streams originales
+            System.setOut(originalOut);
+            System.setErr(originalErr);
         }
     }
 
@@ -234,37 +308,30 @@ public class TestAuth {
     static void testBruteForceBlock(AuthManager auth, DatabaseManager db) {
         auth.register("bf_user", "realPass");
 
-        // 5 intentos fallidos seguidos
         for (int i = 0; i < 5; i++) {
             auth.login("bf_user", "wrongPass");
         }
 
-        // El 6º intento (incluso con contraseña correcta) debe estar bloqueado
         AuthManager.LoginResult r = auth.login("bf_user", "realPass");
         assertTrue("Cuenta bloqueada tras 5 intentos fallidos",
                 r == AuthManager.LoginResult.ACCOUNT_LOCKED);
 
-        // Verificar que isAccountLocked lo detecta
         assertTrue("DB reporta cuenta bloqueada",
                 db.isAccountLocked("bf_user"));
     }
 
     static void testBruteForceResetOnSuccess(AuthManager auth, DatabaseManager db) {
-        // Registrar usuario fresco
         auth.register("reset_user", "goodPass");
 
-        // 3 intentos fallidos (no llega a bloqueo)
         for (int i = 0; i < 3; i++) {
             auth.login("reset_user", "wrongPass");
         }
 
-        // Login correcto — debe resetear el contador
         AuthManager.LoginResult r = auth.login("reset_user", "goodPass");
         assertTrue("Login exitoso tras intentos fallidos (sin bloqueo)",
                 r == AuthManager.LoginResult.SUCCESS);
         auth.logout("reset_user");
 
-        // Verificar que la cuenta no está bloqueada
         assertTrue("Contador reseteado tras login exitoso",
                 !db.isAccountLocked("reset_user"));
     }
@@ -281,14 +348,12 @@ public class TestAuth {
     }
 
     static void testMessageTruncation(DatabaseManager db) {
-        String largo = "A".repeat(200); // 200 chars, debe truncarse a 144
+        String largo = "A".repeat(200);
         db.saveMessage("msg_user", largo);
-        // Si no lanza excepción, el truncado funcionó
         assertTrue("Mensaje largo truncado a 144 caracteres", true);
     }
 
     static void testMessageCount(DatabaseManager db) {
-        // msg_user ya tiene 2 mensajes de los tests anteriores
         int count = db.getMessageCount("msg_user");
         assertTrue("Contador de mensajes correcto (>= 2)", count >= 2);
     }
@@ -310,11 +375,11 @@ public class TestAuth {
     static void printSummary() {
         int total = passed + failed;
         System.out.println("\n╔══════════════════════════════════════════════╗");
-        System.out.printf( "║  Resultados: %d/%d tests pasados              %n", passed, total);
+        System.out.printf( "║  Resultados: %d/%d tests pasados%n", passed, total);
         if (failed == 0) {
             System.out.println("║  ✅ TODOS LOS TESTS SUPERADOS                ║");
         } else {
-            System.out.printf("║  ❌ %d tests fallidos                         %n", failed);
+            System.out.printf("║  ❌ %d tests fallidos%n", failed);
         }
         System.out.println("╚══════════════════════════════════════════════╝");
         System.exit(failed > 0 ? 1 : 0);
