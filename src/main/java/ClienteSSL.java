@@ -183,7 +183,11 @@ public class ClienteSSL {
 
         String cmd;
         if (split.length == 1) {
-            cmd = String.format("HISTORY|%s", split[0]);
+            if (!isNumeric(split[0])){
+                cmd = String.format("HISTORY|%s|%s", split[0], "10");
+            } else {
+                cmd = String.format("HISTORY|%s", split[0]);
+            }
         } else if (split.length == 2) {
             cmd = String.format("HISTORY|%s|%s", split[0], split[1]);
         } else {
@@ -379,17 +383,17 @@ public class ClienteSSL {
         System.out.println("\n╔════════════════════════════════════════════════════════════════╗");
         System.out.println("║                   COMANDOS DISPONIBLES                         ║");
         System.out.println("╠════════════════════════════════════════════════════════════════╣");
-        System.out.println("║  AUTENTICACIÓN:                                               ║");
+        System.out.println("║  AUTENTICACIÓN:                                                ║");
         System.out.println("║    register <usuario> <contraseña>   - Registrar nuevo usuario ║");
         System.out.println("║    login <usuario> <contraseña>      - Iniciar sesión         ║");
         System.out.println("║    logout                            - Cerrar sesión          ║");
-        System.out.println("║                                                              ║");
-        System.out.println("║  MENSAJES:                                                   ║");
+        System.out.println("║                                                               ║");
+        System.out.println("║  MENSAJES:                                                    ║");
         System.out.println("║    send <mensaje>                    - Enviar mensaje         ║");
         System.out.println("║    history <username> <limit>        - Ver historial de mensajes  ║");
-        System.out.println("║                                      (máximo 144 caracteres)  ║");
-        System.out.println("║                                                              ║");
-        System.out.println("║  UTILIDADES:                                                 ║");
+        System.out.println("║                                                               ║");
+        System.out.println("║                                                               ║");
+        System.out.println("║  UTILIDADES:                                                  ║");
         System.out.println("║    status                            - Ver estado actual      ║");
         System.out.println("║    clear                             - Limpiar pantalla       ║");
         System.out.println("║    help                              - Mostrar esta ayuda     ║");
@@ -452,6 +456,17 @@ public class ClienteSSL {
             System.out.println("\n[Cliente] Desconectado. ¡Hasta luego!");
         } catch (IOException e) {
             System.err.println("[Cliente] Error al desconectar: " + e.getMessage());
+        }
+    }
+
+
+    //Funcion auxiliar
+    public static boolean isNumeric(String str) {
+        try {
+            Integer.parseInt(str);
+            return true;
+        } catch (NumberFormatException e) {
+            return false;
         }
     }
 }
