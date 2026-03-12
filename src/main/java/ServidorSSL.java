@@ -45,18 +45,9 @@ public class ServidorSSL {
         SSLServerSocket serverSocket =
                 (SSLServerSocket) factory.createServerSocket(PORT);
 
-        // ── RS-1: Forzar TLS 1.3 únicamente ──────────────────────────────────
-        serverSocket.setEnabledProtocols(new String[]{"TLSv1.3"});
-
-        // ── RS-1: Cipher suites TLS 1.3 robustos (Objetivo 2 del enunciado) ──
-        // TLS_AES_256_GCM_SHA384     → AES-256 en modo GCM + SHA-384 (máxima seguridad)
-        // TLS_CHACHA20_POLY1305_SHA256 → alternativa eficiente en dispositivos sin AES-NI
-        // TLS_AES_128_GCM_SHA256     → mínimo aceptable para compatibilidad
-        serverSocket.setEnabledCipherSuites(new String[]{
-            "TLS_AES_256_GCM_SHA384",
-            "TLS_CHACHA20_POLY1305_SHA256",
-            "TLS_AES_128_GCM_SHA256"
-        });
+        
+        serverSocket.setEnabledProtocols(new String[]{Config.getProtocol()});
+        serverSocket.setEnabledCipherSuites(Config.getCipherSuites());
 
         // Shutdown hook para cerrar limpiamente
         final SSLServerSocket finalSocket = serverSocket;

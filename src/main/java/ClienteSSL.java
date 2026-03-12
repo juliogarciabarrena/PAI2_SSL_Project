@@ -74,8 +74,8 @@ public class ClienteSSL {
 
             socket = (SSLSocket) factory.createSocket(host, port);
 
-            // Forzar TLS 1.3 (RS-1)
-            socket.setEnabledProtocols(new String[]{"TLSv1.3"});
+            socket.setEnabledProtocols(new String[]{Config.getProtocol()});
+            socket.setEnabledCipherSuites(Config.getCipherSuites());
 
             // Iniciar handshake para obtener información de la sesión
             socket.startHandshake();
