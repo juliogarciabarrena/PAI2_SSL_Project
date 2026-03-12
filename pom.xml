@@ -111,6 +111,23 @@
                             </descriptorRefs>
                         </configuration>
                     </execution>
+                    <execution>
+                        <id>jar-cipher-suite-test</id>
+                        <phase>package</phase>
+                        <goals><goal>single</goal></goals>
+                        <configuration>
+                            <finalName>cipher-suite-test</finalName>
+                            <appendAssemblyId>false</appendAssemblyId>
+                            <archive>
+                                <manifest>
+                                    <mainClass>CipherSuiteTest</mainClass>
+                                </manifest>
+                            </archive>
+                            <descriptorRefs>
+                                <descriptorRef>jar-with-dependencies</descriptorRef>
+                            </descriptorRefs>
+                        </configuration>
+                    </execution>
 
                 </executions>
             </plugin>
