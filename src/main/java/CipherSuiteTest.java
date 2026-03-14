@@ -1,5 +1,8 @@
 import javax.net.ssl.*;
 import java.io.*;
+import java.nio.file.*;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 /**
  * CipherSuiteTest — Verifica que el cliente puede conectarse al servidor
@@ -14,62 +17,76 @@ import java.io.*;
  * Ejecución:
  *   java -Djavax.net.ssl.trustStore=certs/truststore.jks \
  *        -Djavax.net.ssl.trustStorePassword=PAI2password \
- *        -jar target/performance-test.jar
+ *        -cp target/classes:target/dependency-jars/* \
+ *        CipherSuiteTest [host] [puerto]
+ *
+ * Por defecto: localhost 8443
+ *
+ * Log: Se guarda automáticamente en logs/cipher_suite_test_YYYY-MM-DD_HHMM.log
  *
  * Resultado esperado: ✅ para cada cipher suite configurada
  */
 public class CipherSuiteTest {
 
     private static final String DEFAULT_HOST = "localhost";
-    private static final int    DEFAULT_PORT = 8443;
+    private static final int DEFAULT_PORT = 8443;
+    
+    // PrintWriter para escribir el log
+    private static PrintWriter logWriter;
+    private static StringBuilder logBuffer;
 
-    // Resultado de un test individual
+    /**
+     * Resultado de un test individual
+     */
     private static class TestResult {
-        final String  cipherSuite;
+        final String cipherSuite;
         final boolean success;
-        final String  negotiatedProtocol;
-        final String  negotiatedCipher;
-        final long    handshakeMs;
-        final String  errorMessage;
+        final String negotiatedProtocol;
+        final String negotiatedCipher;
+        final long handshakeMs;
+        final String errorMessage;
 
         TestResult(String cipherSuite, boolean success, String negotiatedProtocol,
                    String negotiatedCipher, long handshakeMs, String errorMessage) {
-            this.cipherSuite        = cipherSuite;
-            this.success            = success;
+            this.cipherSuite = cipherSuite;
+            this.success = success;
             this.negotiatedProtocol = negotiatedProtocol;
-            this.negotiatedCipher   = negotiatedCipher;
-            this.handshakeMs        = handshakeMs;
-            this.errorMessage       = errorMessage;
+            this.negotiatedCipher = negotiatedCipher;
+            this.handshakeMs = handshakeMs;
+            this.errorMessage = errorMessage;
         }
     }
 
-    // -------------------------------------------------------------------------
+    // =========================================================================
     // MAIN
-    // -------------------------------------------------------------------------
+    // =========================================================================
 
     public static void main(String[] args) throws InterruptedException {
         String host = args.length > 0 ? args[0] : DEFAULT_HOST;
-        int    port = args.length > 1 ? Integer.parseInt(args[1]) : DEFAULT_PORT;
+        int port = args.length > 1 ? Integer.parseInt(args[1]) : DEFAULT_PORT;
 
         String[] cipherSuites = Config.getCipherSuites();
-        String   protocol     = Config.getProtocol();
+        String protocol = Config.getProtocol();
+        
+        // Inicializar log
+        initializeLog();
 
-        System.out.println("╔═════════════════════════════════════════════════════════════╗");
-        System.out.println("║         Test de Cipher Suites — VPN SSL (TLS 1.3)           ║");
-        System.out.println("╚═════════════════════════════════════════════════════════════╝");
-        System.out.println("[Test] Servidor : " + host + ":" + port);
-        System.out.println("[Test] Protocolo: " + protocol);
-        System.out.println("[Test] Cipher suites a probar: " + cipherSuites.length);
+        println("\n╔═════════════════════════════════════════════════════════════╗");
+        println("║         Test de Cipher Suites — VPN SSL (TLS 1.3)           ║");
+        println("╚═════════════════════════════════════════════════════════════╝\n");
+        println("[Test] Servidor : " + host + ":" + port);
+        println("[Test] Protocolo: " + protocol);
+        println("[Test] Cipher suites a probar: " + cipherSuites.length);
         for (String cs : cipherSuites) {
-            System.out.println("         • " + cs);
+            println("         • " + cs);
         }
-        System.out.println();
+        println("");
 
         // Ejecutar un test por cada cipher suite
         TestResult[] results = new TestResult[cipherSuites.length];
         for (int i = 0; i < cipherSuites.length; i++) {
-            System.out.printf("[Test] (%d/%d) Probando: %s%n",
-                    i + 1, cipherSuites.length, cipherSuites[i]);
+            println(String.format("[Test] (%d/%d) Probando: %s",
+                    i + 1, cipherSuites.length, cipherSuites[i]));
             results[i] = testCipherSuite(host, port, protocol, cipherSuites[i]);
             printSingleResult(results[i]);
             // Pequeña pausa entre tests para no saturar el servidor
@@ -78,11 +95,14 @@ public class CipherSuiteTest {
 
         // Reporte final
         printFinalReport(results, protocol);
+        
+        // Cerrar el log
+        closeLog();
     }
 
-    // -------------------------------------------------------------------------
+    // =========================================================================
     // TEST DE UN CIPHER SUITE
-    // -------------------------------------------------------------------------
+    // =========================================================================
 
     private static TestResult testCipherSuite(String host, int port,
                                                String protocol, String cipherSuite) {
@@ -103,49 +123,53 @@ public class CipherSuiteTest {
             // Leer los valores realmente negociados
             SSLSession session = socket.getSession();
             String negotiatedProtocol = session.getProtocol();
-            String negotiatedCipher   = session.getCipherSuite();
+            String negotiatedCipher = session.getCipherSuite();
 
             socket.close();
 
             // Verificar que lo negociado coincide con lo solicitado
             boolean protocolOk = protocol.equals(negotiatedProtocol);
-            boolean cipherOk   = cipherSuite.equals(negotiatedCipher);
-            boolean success    = protocolOk && cipherOk;
+            boolean cipherOk = cipherSuite.equals(negotiatedCipher);
+            boolean success = protocolOk && cipherOk;
 
             String errorMsg = null;
             if (!protocolOk)
                 errorMsg = "Protocolo negociado incorrecto: " + negotiatedProtocol;
             if (!cipherOk)
                 errorMsg = (errorMsg != null ? errorMsg + " | " : "")
-                         + "Cipher negociado incorrecto: " + negotiatedCipher;
+                        + "Cipher negociado incorrecto: " + negotiatedCipher;
 
             return new TestResult(cipherSuite, success, negotiatedProtocol,
-                                  negotiatedCipher, handshakeMs, errorMsg);
+                    negotiatedCipher, handshakeMs, errorMsg);
 
         } catch (IOException e) {
             long elapsed = System.currentTimeMillis() - startTime;
             return new TestResult(cipherSuite, false, "N/A", "N/A",
-                                  elapsed, e.getClass().getSimpleName() + ": " + e.getMessage());
+                    elapsed, e.getClass().getSimpleName() + ": " + e.getMessage());
+        } catch (Exception e) {
+            long elapsed = System.currentTimeMillis() - startTime;
+            return new TestResult(cipherSuite, false, "N/A", "N/A",
+                    elapsed, e.getClass().getSimpleName() + ": " + e.getMessage());
         }
     }
 
-    // -------------------------------------------------------------------------
+    // =========================================================================
     // RESULTADO INDIVIDUAL
-    // -------------------------------------------------------------------------
+    // =========================================================================
 
     private static void printSingleResult(TestResult r) {
         if (r.success) {
-            System.out.printf("  ✅ OK  |  Protocolo: %-10s  |  Cipher: %-40s  |  Handshake: %d ms%n",
-                    r.negotiatedProtocol, r.negotiatedCipher, r.handshakeMs);
+            println(String.format("  ✅ OK  |  Protocolo: %-10s  |  Cipher: %-40s  |  Handshake: %d ms",
+                    r.negotiatedProtocol, r.negotiatedCipher, r.handshakeMs));
         } else {
-            System.out.printf("  ❌ FAIL |  %s%n", r.errorMessage);
+            println(String.format("  ❌ FAIL |  %s", r.errorMessage));
         }
-        System.out.println();
+        println("");
     }
 
-    // -------------------------------------------------------------------------
+    // =========================================================================
     // REPORTE FINAL
-    // -------------------------------------------------------------------------
+    // =========================================================================
 
     private static void printFinalReport(TestResult[] results, String protocol) {
         int passed = 0;
@@ -163,48 +187,101 @@ public class CipherSuiteTest {
 
         double avgHandshake = passed > 0 ? (double) totalHandshakeMs / passed : 0;
 
-        System.out.println("╔═════════════════════════════════════════════════════════════╗");
-        System.out.println("║                    REPORTE FINAL                            ║");
-        System.out.println("╚═════════════════════════════════════════════════════════════╝\n");
+        println("╔═════════════════════════════════════════════════════════════╗");
+        println("║                    REPORTE FINAL                            ║");
+        println("╚═════════════════════════════════════════════════════════════╝\n");
 
         // Tabla de resultados
-        System.out.printf("%-44s  %-10s  %-12s  %s%n",
-                "Cipher Suite", "Resultado", "Handshake", "Detalle");
-        System.out.println("-".repeat(90));
+        println(String.format("%-44s  %-10s  %-12s  %s",
+                "Cipher Suite", "Resultado", "Handshake", "Detalle"));
+        println("-".repeat(90));
 
         for (TestResult r : results) {
             if (r.success) {
-                System.out.printf("%-44s  %-10s  %-9d ms  Protocolo: %s%n",
-                        r.cipherSuite, "✅ PASS", r.handshakeMs, r.negotiatedProtocol);
+                println(String.format("%-44s  %-10s  %-9d ms  Protocolo: %s",
+                        r.cipherSuite, "✅ PASS", r.handshakeMs, r.negotiatedProtocol));
             } else {
-                System.out.printf("%-44s  %-10s  %-9d ms  %s%n",
-                        r.cipherSuite, "❌ FAIL", r.handshakeMs, r.errorMessage);
+                println(String.format("%-44s  %-10s  %-9d ms  %s",
+                        r.cipherSuite, "❌ FAIL", r.handshakeMs, r.errorMessage));
             }
         }
 
-        System.out.println("-".repeat(90));
-        System.out.printf("%n  • Tests ejecutados : %d%n", results.length);
-        System.out.printf("  • Pasados          : %d ✅%n", passed);
-        System.out.printf("  • Fallados         : %d ❌%n", failed);
-        System.out.printf("  • Handshake medio  : %.2f ms%n", avgHandshake);
-        System.out.printf("  • Tasa de éxito    : %.1f%%%n%n",
-                results.length > 0 ? (100.0 * passed) / results.length : 0);
+        println("-".repeat(90));
+        println(String.format("%n  • Tests ejecutados : %d", results.length));
+        println(String.format("  • Pasados          : %d ✅", passed));
+        println(String.format("  • Fallados         : %d ❌", failed));
+        println(String.format("  • Handshake medio  : %.2f ms", avgHandshake));
+        println(String.format("  • Tasa de éxito    : %.1f%%%n",
+                results.length > 0 ? (100.0 * passed) / results.length : 0));
 
         // Veredicto
-        System.out.println("=".repeat(60));
+        println("=".repeat(90));
         if (failed == 0) {
-            System.out.println("  ✅ TODOS los cipher suites funcionan correctamente");
-            System.out.println("  ✅ Protocolo " + protocol + " verificado en todas las conexiones");
+            println("  ✅ TODOS los cipher suites funcionan correctamente");
+            println("  ✅ Protocolo " + protocol + " verificado en todas las conexiones");
         } else {
-            System.out.println("  ⚠️  Algunos cipher suites fallaron — revisar config.properties");
-            System.out.println("     y verificar que el servidor los tiene habilitados.");
-            System.out.println();
-            System.out.println("  Cipher suites con error:");
+            println("  ⚠️  Algunos cipher suites fallaron — revisar config.properties");
+            println("     y verificar que el servidor los tiene habilitados.");
+            println("");
+            println("  Cipher suites con error:");
             for (TestResult r : results) {
                 if (!r.success)
-                    System.out.println("    ❌ " + r.cipherSuite + " → " + r.errorMessage);
+                    println("    ❌ " + r.cipherSuite + " → " + r.errorMessage);
             }
         }
-        System.out.println("=".repeat(60) + "\n");
+        println("=".repeat(90) + "\n");
+    }
+
+    // =========================================================================
+    // UTILIDADES DE LOG
+    // =========================================================================
+
+    /**
+     * Inicializa el archivo de log en la carpeta logs/
+     */
+    private static void initializeLog() {
+        try {
+            // Crear carpeta logs si no existe
+            Path logsDir = Paths.get("logs");
+            Files.createDirectories(logsDir);
+
+            // Generar nombre del archivo con fecha y hora
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd_HHmm");
+            String timestamp = LocalDateTime.now().format(formatter);
+            String logFilename = "logs/cipher_suite_test_" + timestamp + ".log";
+
+            // Crear el archivo de log
+            logWriter = new PrintWriter(new FileWriter(logFilename, true), true);
+            logBuffer = new StringBuilder();
+
+            println("\n[Log] Guardando en: " + logFilename);
+
+        } catch (IOException e) {
+            System.err.println("Error al crear archivo de log: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Imprime en pantalla Y guarda en el log simultáneamente
+     */
+    private static void println(String message) {
+        // Mostrar en pantalla
+        System.out.println(message);
+
+        // Guardar en log (si está inicializado)
+        if (logWriter != null) {
+            logWriter.println(message);
+            logWriter.flush();
+        }
+    }
+
+    /**
+     * Cierra el archivo de log
+     */
+    private static void closeLog() {
+        if (logWriter != null) {
+            logWriter.close();
+            System.out.println("[Log] Archivo guardado correctamente");
+        }
     }
 }
