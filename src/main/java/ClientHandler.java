@@ -177,7 +177,7 @@ public class ClientHandler implements Runnable {
     }
 
         // -------------------------------------------------------------------------
-    // MSG|texto
+    // HISTORY|[nombre de usuario][número de mensajes]
     // -------------------------------------------------------------------------
     private String handleHistory(String[] parts) {
         int limit = 10; 
