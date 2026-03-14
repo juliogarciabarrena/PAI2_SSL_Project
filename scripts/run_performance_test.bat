@@ -2,16 +2,20 @@
 REM ============================================================================
 REM Script para ejecutar test de rendimiento (300 clientes) en Windows
 REM Requisito: ServidorSSL debe estar ejecutándose
-REM Uso: run_performance_test.bat [num_clientes] [host] [puerto]
+REM Uso: run_performance_test_simple.bat [num_clientes] [host] [puerto]
 REM      Por defecto: 300 localhost 8443
 REM ============================================================================
 
 setlocal enabledelayedexpansion
 
+REM Configurar encoding UTF-8
+chcp 65001 >nul
+set JAVA_TOOL_OPTIONS=-Dfile.encoding=UTF-8
+
 echo.
-echo ╔═══════════════════════════════════════════════════╗
-echo ║     Test de Rendimiento (300 clientes) - WINDOWS  ║
-echo ╚═══════════════════════════════════════════════════╝
+echo ===============================================================
+echo   Test de Rendimiento (300 clientes) - WINDOWS
+echo ===============================================================
 echo.
 
 REM Obtener parametros
@@ -36,12 +40,13 @@ if not exist "%LOGS_DIR%" mkdir "%LOGS_DIR%"
 
 REM Verificar directorios
 if not exist "%CLASSES_DIR%\PerformanceTest.class" (
-    echo ❌ ERROR: No se encuentra PerformanceTest.class
+    echo [ERROR] No se encuentra PerformanceTest.class
+    echo Ejecuta primero: scripts\setup.bat
     pause
     exit /b 1
 )
 
-echo [✓] Verificacion completada
+echo [OK] Verificacion completada
 echo     Proyecto:    %PROJECT_ROOT%
 echo     Clientes:    %NUM_CLIENTS%
 echo     Host:        %HOST%
@@ -50,32 +55,33 @@ echo     Log file:    %LOGS_DIR%\performance_test.log
 echo.
 
 echo [+] Iniciando test de rendimiento...
-echo     Simulando %NUM_CLIENTS% clientes concurrentes
+echo     Probando %NUM_CLIENTS% conexiones simultaneas
 echo     Esto puede tomar 30-60 segundos...
 echo.
 
-REM Ejecutar test y guardar log (sin tee, compatible con Windows)
+REM Ejecutar test y guardar log
 cd /d "%PROJECT_ROOT%"
 
-java -Djavax.net.ssl.trustStore="%CERTS_DIR%\truststore.jks" ^
+java -Dfile.encoding=UTF-8 ^
+     -Djavax.net.ssl.trustStore="%CERTS_DIR%\truststore.jks" ^
      -Djavax.net.ssl.trustStorePassword=PAI2password ^
      -cp "%CLASSES_DIR%;%LIBS_DIR%\*" ^
      PerformanceTest %NUM_CLIENTS% %HOST% %PORT% > "%LOGS_DIR%\performance_test.log" 2>&1
 
 if errorlevel 1 (
     echo.
-    echo ❌ Error durante el test
-    echo    Verifica que ServidorSSL esta ejecutándose
+    echo [ERROR] Fallo durante el test
+    echo Verifica que ServidorSSL esta ejecutandose en otra terminal
     pause
     exit /b 1
 )
 
 echo.
-echo ═══════════════════════════════════════════════════════════════
-echo ✅ Test completado!
+echo ===============================================================
+echo [OK] Test completado exitosamente!
 echo.
 echo Resultados guardados en: %LOGS_DIR%\performance_test.log
-echo ═══════════════════════════════════════════════════════════════
+echo ===============================================================
 echo.
 
 REM Mostrar resultados en pantalla

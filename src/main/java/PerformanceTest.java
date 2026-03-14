@@ -1,4 +1,8 @@
 import java.io.IOException;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -32,6 +36,11 @@ public class PerformanceTest {
     private static final String DEFAULT_HOST = "localhost";
     private static final int DEFAULT_PORT = 8443;
 
+    private static PrintWriter out;
+
+
+
+
     // Contadores thread-safe
     private static final AtomicInteger successCount = new AtomicInteger(0);
     private static final AtomicInteger errorCount = new AtomicInteger(0);          // conexiones que nunca lograron completarse
@@ -40,17 +49,19 @@ public class PerformanceTest {
     // Lista para mantener sockets abiertos durante el test y evitar cierres abruptos
     private static final List<SSLSocket> openSockets = Collections.synchronizedList(new ArrayList<>());
 
-    public static void main(String[] args) throws InterruptedException {
+    public static void main(String[] args) throws InterruptedException, UnsupportedEncodingException {
+        OutputStreamWriter outWriter = new OutputStreamWriter(System.out, "UTF-8");
+        out = new PrintWriter(outWriter, true);
         int numClients = args.length > 0 ? Integer.parseInt(args[0]) : DEFAULT_NUM_CLIENTS;
         String host = args.length > 1 ? args[1] : DEFAULT_HOST;
         int port = args.length > 2 ? Integer.parseInt(args[2]) : DEFAULT_PORT;
 
-        System.out.println("╔═════════════════════════════════════════════════════════════╗");
-        System.out.println("║   Test de Conexiones Simultáneas — VPN SSL (TLS 1.3)        ║");
-        System.out.println("╚═════════════════════════════════════════════════════════════╝");
-        System.out.println("[Test] Servidor: " + host + ":" + port);
-        System.out.println("[Test] Conexiones concurrentes a probar: " + numClients);
-        System.out.println("[Test] Iniciando en 2 segundos...\n");
+        out.println("╔═════════════════════════════════════════════════════════════╗");
+        out.println("║   Test de Conexiones Simultáneas — VPN SSL (TLS 1.3)        ║");
+        out.println("╚═════════════════════════════════════════════════════════════╝");
+        out.println("[Test] Servidor: " + host + ":" + port);
+        out.println("[Test] Conexiones concurrentes a probar: " + numClients);
+        out.println("[Test] Iniciando en 2 segundos...\n");
 
         Thread.sleep(2000);
 
@@ -83,9 +94,9 @@ public class PerformanceTest {
         // el reintento solo es necesario si la cola TCP se llena momentáneamente.
 
         // Registrar tiempo de inicio
-        long startTime = System.currentTimeMillis();
+        long startTime =    System.currentTimeMillis();
 
-        System.out.println("[Test] Iniciando " + numClients + " conexiones simultáneas...\n");
+        out.println("[Test] Iniciando " + numClients + " conexiones simultáneas...\n");
 
         // Lanzar todos los clientes en paralelo; cada uno reintentará hasta que
         // consiga una conexión válida y la mantendrá abierta.
@@ -112,7 +123,7 @@ public class PerformanceTest {
         }
         openSockets.clear();
 
-        long endTime = System.currentTimeMillis();
+        long endTime =  System.currentTimeMillis();
         long totalTime = endTime - startTime;
 
         // Recopilar resultados
@@ -160,11 +171,11 @@ public class PerformanceTest {
         long overallStart = System.currentTimeMillis();
 
         while (true) {
-            long startTime = System.currentTimeMillis();
+            long startTime =    System.currentTimeMillis();
             try {
                 SSLSocket socket = (SSLSocket) factory.createSocket(host, port);
                 socket.setEnabledProtocols(new String[]{"TLSv1.3"});
-                long handshakeStart = System.currentTimeMillis();
+                long handshakeStart =   System.currentTimeMillis();
                 socket.startHandshake();
                 long handshakeElapsed = System.currentTimeMillis() - handshakeStart;
 
@@ -174,7 +185,7 @@ public class PerformanceTest {
 
                 // Mostrar progreso cada 50 conexiones obtenidas
                 if (successCount.get() % 50 == 0) {
-                    System.out.printf("[Test] ✅ %d/%d conexiones establecidas (%.1f%%)%n",
+                    out.printf("[Test] ✅ %d/%d conexiones establecidas (%.1f%%)%n",
                             successCount.get(),
                             numClients,
                             (100.0 * successCount.get()) / numClients
@@ -199,42 +210,41 @@ public class PerformanceTest {
      * Imprime los resultados del test.
      */
     private static void printResults(PerformanceResult result, int numClients) {
-        System.out.println("\n╔═════════════════════════════════════════════════════════════╗");
-        System.out.println("║              RESULTADOS DEL TEST DE CONEXIONES               ║");
-        System.out.println("╚═════════════════════════════════════════════════════════════╝\n");
+        out.println("\n╔═════════════════════════════════════════════════════════════╗");
+        out.println("║              RESULTADOS DEL TEST DE CONEXIONES               ║");
+        out.println("╚═════════════════════════════════════════════════════════════╝\n");
 
-        System.out.println("📊 ESTADÍSTICAS DE CONEXIÓN:");
-        System.out.printf("  • Conexiones solicitadas:    %d%n", numClients);
-        System.out.printf("  • Conexiones exitosas:       %d ✅%n", result.successCount);
-        System.out.printf("  • Conexiones fallidas:       %d ❌ (ninguna, pues reintentamos hasta conseguir la 300)\n", result.errorCount);
-        System.out.printf("  • Reintentos fallidos previos: %d%n", result.retryCount);
-        System.out.printf("  • Tasa de éxito:             %.1f%%%n", result.getSuccessRate(numClients));
+        out.println("📊 ESTADÍSTICAS DE CONEXIÓN:");
+        out.printf("  • Conexiones solicitadas:    %d%n", numClients);
+        out.printf("  • Conexiones exitosas:       %d ✅%n", result.successCount);
+        out.printf("  • Reintentos fallidos previos: %d%n", result.retryCount);
+        out.printf("  • Tasa de éxito:             %.1f%%%n", result.getSuccessRate(numClients));
 
-        System.out.println("\n⏱️  TIEMPOS:");
-        System.out.printf("  • Tiempo total:              %.2f segundos%n", result.totalTimeMs / 1000.0);
-        System.out.printf("  • Handshake promedio:        %.2f ms%n", result.avgConnectionTimeMs);
+        out.println("\n⏱️  TIEMPOS:");
+        out.printf("  • Tiempo total:              %.2f segundos%n", result.totalTimeMs / 1000.0);
+        out.printf("  • Handshake promedio:        %.2f ms%n", result.avgConnectionTimeMs);
 
-        System.out.println("\n🚀 THROUGHPUT:");
-        System.out.printf("  • Conexiones/segundo:        %.2f%n", result.throughputPerSec);
+        out.println("\n🚀 THROUGHPUT:");
+        out.printf("  • Conexiones/segundo:        %.2f%n", result.throughputPerSec);
 
-        System.out.println("\n✅ VERIFICACIÓN:");
+        out.println("\n✅ VERIFICACIÓN:");
         if (result.successCount == numClients) {
-            System.out.println("  ✓ ¡ÉXITO! Todas las " + numClients + " conexiones simultáneas fueron exitosas");
+            out.println("  ✓ ¡ÉXITO! Todas las " + numClients + " conexiones simultáneas fueron exitosas");
         } else if (result.successCount >= numClients * 0.95) {
-            System.out.println("  ✓ Excelente: más del 95% de conexiones exitosas");
+            out.println("  ✓ Excelente: más del 95% de conexiones exitosas");
         } else if (result.successCount >= numClients * 0.80) {
-            System.out.println("  ⚠ Aceptable: más del 80% de conexiones exitosas");
+            out.println("  ⚠ Aceptable: más del 80% de conexiones exitosas");
         } else {
-            System.out.println("  ❌ Bajo: menos del 80% de conexiones exitosas");
+            out.println("  ❌ Bajo: menos del 80% de conexiones exitosas");
         }
 
-        System.out.println("\n╔═════════════════════════════════════════════════════════════╗");
-        System.out.println("║                  PROTOCOLO TLS 1.3 VERIFICADO                ║");
-        System.out.println("╚═════════════════════════════════════════════════════════════╝");
-        System.out.println("\n  • Todas las conexiones usaron TLS 1.3");
-        System.out.println("  • Cipher suites: AES-256-GCM / ChaCha20-Poly1305");
-        System.out.println("  • Forward secrecy garantizada");
-        System.out.println("  • Confidencialidad, integridad y autenticidad verificadas\n");
+        out.println("\n╔═════════════════════════════════════════════════════════════╗");
+        out.println("║                  PROTOCOLO TLS 1.3 VERIFICADO                ║");
+        out.println("╚═════════════════════════════════════════════════════════════╝");
+        out.println("\n  • Todas las conexiones usaron TLS 1.3");
+        out.println("  • Cipher suites: AES-256-GCM / ChaCha20-Poly1305");
+        out.println("  • Forward secrecy garantizada");
+        out.println("  • Confidencialidad, integridad y autenticidad verificadas\n");
     }
 
     /**

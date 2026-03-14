@@ -8,9 +8,19 @@ REM   2. ServidorPlain corriendo en 8080  →  run_server_plain.bat
 REM   3. Haber compilado                  →  mvn package
 REM =============================================================================
 
-set TRUSTSTORE=certs\truststore.jks
+setlocal enabledelayedexpansion
+
+
+
+REM Configurar encoding UTF-8
+chcp 65001 >nul
+set JAVA_TOOL_OPTIONS=-Dfile.encoding=UTF-8
+
+set SCRIPT_DIR=%~dp0
+set PROJECT_ROOT=%SCRIPT_DIR%..
+set CERTS_DIR=%PROJECT_ROOT%\certs
 set PASSWORD=PAI2password
-set JAR=target\performance-test.jar
+set JAR=%PROJECT_ROOT%\target\performance-test.jar
 set LOGS_DIR=logs
 
 REM Crear directorio de logs si no existe
@@ -21,8 +31,8 @@ for /f "tokens=1-3 delims=/" %%a in ("%DATE%") do set FECHA=%%c-%%b-%%a
 for /f "tokens=1-2 delims=:." %%a in ("%TIME: =0%") do set HORA=%%a%%b
 set LOG=%LOGS_DIR%\performance_test_comparativa_%FECHA%_%HORA%.log
 
-if not exist "%TRUSTSTORE%" (
-    echo ERROR: No se encuentra %TRUSTSTORE%
+if not exist "%CERTS_DIR%\truststore.jks" (
+    echo ERROR: No se encuentra %CERTS_DIR%\truststore.jks
     echo Ejecuta primero: scripts\setup.bat
     pause
     exit /b 1
@@ -44,10 +54,13 @@ echo   Log: %LOG%
 echo ============================================================
 echo.
 
+cd /d "%PROJECT_ROOT%"
+
 REM Ejecutar el test mostrando salida en pantalla Y guardando en el log simultáneamente
-java -Djavax.net.ssl.trustStore="%TRUSTSTORE%" ^
+java -Dfile.encoding=UTF-8 ^
+     -Djavax.net.ssl.trustStore="%CERTS_DIR%\truststore.jks" ^
      -Djavax.net.ssl.trustStorePassword="%PASSWORD%" ^
-     -jar "%JAR%" > "%LOG%" 2>&1
+     -jar "%JAR%"
 
 if errorlevel 1 (
     echo.

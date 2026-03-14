@@ -8,11 +8,6 @@ REM ============================================================================
 
 setlocal enabledelayedexpansion
 
-echo.
-echo ╔═══════════════════════════════════════════════════╗
-echo ║     Cliente SSL - WINDOWS                         ║
-echo ╚═══════════════════════════════════════════════════╝
-echo.
 
 REM Obtener parametros (host y puerto)
 set HOST=%1

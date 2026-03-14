@@ -1,5 +1,8 @@
 import java.io.*;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -46,42 +49,87 @@ public class PerformanceTestComparativa {
     // MAIN
     // -------------------------------------------------------------------------
 
-    public static void main(String[] args) throws InterruptedException {
+    private static PrintWriter out;
+    private static PrintWriter logFileWriter;
+
+    public static void main(String[] args) throws InterruptedException, UnsupportedEncodingException, IOException {
+
+        // Configurar salida a pantalla con UTF-8
+        OutputStreamWriter outWriter = new OutputStreamWriter(System.out, "UTF-8");
+        out = new PrintWriter(outWriter, true);
+        
+        // Crear archivo de log con UTF-8
+        File logsDir = new File("logs");
+        logsDir.mkdirs();
+
+        String timestamp = LocalDateTime.now()
+                .format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HHmm"));
+
+        File logFile = new File(logsDir,
+                "performance_test_comparativa_" + timestamp + ".log");
+
+        System.out.println("Log file: " + logFile.getAbsolutePath());
+        logFileWriter = new PrintWriter(
+                new OutputStreamWriter(
+                        new FileOutputStream(logFile),
+                        StandardCharsets.UTF_8),
+                true);
+        
         int    numClients = args.length > 0 ? Integer.parseInt(args[0]) : DEFAULT_NUM_CLIENTS;
         String host       = args.length > 1 ? args[1]                   : DEFAULT_HOST;
         int    sslPort    = args.length > 2 ? Integer.parseInt(args[2]) : DEFAULT_SSL_PORT;
         int    plainPort  = args.length > 3 ? Integer.parseInt(args[3]) : DEFAULT_PLAIN_PORT;
 
-        System.out.println("╔═════════════════════════════════════════════════════════════╗");
-        System.out.println("║   Comparativa Conexiones Simultáneas — SSL vs Plain         ║");
-        System.out.println("╚═════════════════════════════════════════════════════════════╝");
-        System.out.println("[Test] Servidor SSL:   " + host + ":" + sslPort);
-        System.out.println("[Test] Servidor Plain: " + host + ":" + plainPort);
-        System.out.println("[Test] Conexiones concurrentes: " + numClients);
-        System.out.println("[Test] Iniciando en 2 segundos...\n");
+        println("╔═════════════════════════════════════════════════════════════╗");
+        println("║   Comparativa Conexiones Simultáneas — SSL vs Plain         ║");
+        println("╚═════════════════════════════════════════════════════════════╝");
+        println("[Test] Servidor SSL:   " + host + ":" + sslPort);
+        println("[Test] Servidor Plain: " + host + ":" + plainPort);
+        println("[Test] Conexiones concurrentes: " + numClients);
+        println("[Test] Iniciando en 2 segundos...\n");
         Thread.sleep(2000);
 
         // --- TEST 1: SSL ---
-        System.out.println("=".repeat(60));
-        System.out.println("  [1/2] 🔒 TEST CON SSL (TLS 1.3) — puerto " + sslPort);
-        System.out.println("=".repeat(60) + "\n");
+        println("=".repeat(60));
+        println("  [1/2] 🔒 TEST CON SSL (TLS 1.3) — puerto " + sslPort);
+        println("=".repeat(60) + "\n");
         PerformanceResult sslResult = runSSLTest(numClients, host, sslPort);
         printIndividualResults(sslResult, numClients, true);
 
         // Pausa entre tests
-        System.out.println("\n[Test] Esperando 2 segundos antes del test plain...\n");
+        println("\n[Test] Esperando 2 segundos antes del test plain...\n");
         Thread.sleep(2000);
 
         // --- TEST 2: Plain ---
-        System.out.println("=".repeat(60));
-        System.out.println("  [2/2] 🔓 TEST SIN SSL (TCP plain) — puerto " + plainPort);
-        System.out.println("=".repeat(60) + "\n");
+        println("=".repeat(60));
+        println("  [2/2] 🔓 TEST SIN SSL (TCP plain) — puerto " + plainPort);
+        println("=".repeat(60) + "\n");
         PerformanceResult plainResult = runPlainTest(numClients, host, plainPort);
         printIndividualResults(plainResult, numClients, false);
 
         // --- COMPARATIVA FINAL ---
         printComparativa(sslResult, plainResult, numClients);
+        
+        // Cerrar archivo de log
+        println("\n[Log] Resultados guardados en: " + logFile);
+        logFileWriter.close();
     }
+
+    /**
+     * Imprime en pantalla Y guarda en archivo de log con UTF-8
+     */
+        private static void println(String msg) {
+            out.println(msg);
+            logFileWriter.println(msg);
+        }
+
+    /**
+     * printf en pantalla Y archivo con UTF-8
+     */
+        private static void printf(String format, Object... args) {
+            out.printf(format, args);
+            logFileWriter.printf(format, args);
+        }
 
     // -------------------------------------------------------------------------
     // TEST SSL
@@ -99,7 +147,7 @@ public class PerformanceTestComparativa {
         List<Future<ConnectionResult>> futures = new ArrayList<>();
         long startTime = System.currentTimeMillis();
 
-        System.out.println("[SSL] Iniciando " + numClients + " conexiones simultáneas...\n");
+        println("[SSL] Iniciando " + numClients + " conexiones simultáneas...\n");
 
         for (int i = 0; i < numClients; i++) {
             int clientId = i;
@@ -140,7 +188,7 @@ public class PerformanceTestComparativa {
         List<Future<ConnectionResult>> futures = new ArrayList<>();
         long startTime = System.currentTimeMillis();
 
-        System.out.println("[Plain] Iniciando " + numClients + " conexiones simultáneas...\n");
+        println("[Plain] Iniciando " + numClients + " conexiones simultáneas...\n");
 
         for (int i = 0; i < numClients; i++) {
             int clientId = i;
@@ -166,7 +214,7 @@ public class PerformanceTestComparativa {
     }
 
     // -------------------------------------------------------------------------
-    // WORKLOAD SSL — idéntico a PerformanceTest original
+    // WORKLOAD SSL
     // -------------------------------------------------------------------------
 
     private static ConnectionResult attemptSSLConnection(int clientId, String host, int port,
@@ -185,7 +233,7 @@ public class PerformanceTestComparativa {
                 successCount.incrementAndGet();
 
                 if (successCount.get() % 50 == 0) {
-                    System.out.printf("[SSL] ✅ %d/%d conexiones establecidas (%.1f%%)%n",
+                    printf("[SSL] ✅ %d/%d conexiones establecidas (%.1f%%)%n",
                             successCount.get(), numClients,
                             (100.0 * successCount.get()) / numClients);
                 }
@@ -200,7 +248,7 @@ public class PerformanceTestComparativa {
     }
 
     // -------------------------------------------------------------------------
-    // WORKLOAD PLAIN — equivalente sin handshake TLS
+    // WORKLOAD PLAIN
     // -------------------------------------------------------------------------
 
     private static ConnectionResult attemptPlainConnection(int clientId, String host, int port,
@@ -215,7 +263,7 @@ public class PerformanceTestComparativa {
                 successCount.incrementAndGet();
 
                 if (successCount.get() % 50 == 0) {
-                    System.out.printf("[Plain] ✅ %d/%d conexiones establecidas (%.1f%%)%n",
+                    printf("[Plain] ✅ %d/%d conexiones establecidas (%.1f%%)%n",
                             successCount.get(), numClients,
                             (100.0 * successCount.get()) / numClients);
                 }
@@ -267,34 +315,34 @@ public class PerformanceTestComparativa {
 
     private static void printIndividualResults(PerformanceResult r, int numClients, boolean ssl) {
         String label = ssl ? "CON SSL (TLS 1.3)" : "SIN SSL (TCP plain)";
-        System.out.println("\n╔═════════════════════════════════════════════════════════════╗");
-        System.out.printf( "║  RESULTADOS — %-46s║%n", label);
-        System.out.println("╚═════════════════════════════════════════════════════════════╝\n");
+        println("\n╔═════════════════════════════════════════════════════════════╗");
+        printf( "║  RESULTADOS — %-46s║%n", label);
+        println("╚═════════════════════════════════════════════════════════════╝\n");
 
-        System.out.println("📊 ESTADÍSTICAS DE CONEXIÓN:");
-        System.out.printf("  • Conexiones solicitadas:      %d%n",   numClients);
-        System.out.printf("  • Conexiones exitosas:         %d ✅%n", r.successCount);
-        System.out.printf("  • Conexiones fallidas:         %d ❌%n", r.errorCount);
-        System.out.printf("  • Reintentos:                  %d%n",   r.retryCount);
-        System.out.printf("  • Tasa de éxito:               %.1f%%%n", r.getSuccessRate(numClients));
+        println("📊 ESTADÍSTICAS DE CONEXIÓN:");
+        printf("  • Conexiones solicitadas:      %d%n",   numClients);
+        printf("  • Conexiones exitosas:         %d ✅%n", r.successCount);
+        printf("  • Conexiones fallidas:         %d ❌%n", r.errorCount);
+        printf("  • Reintentos:                  %d%n",   r.retryCount);
+        printf("  • Tasa de éxito:               %.1f%%%n", r.getSuccessRate(numClients));
 
-        System.out.println("\n⏱️  TIEMPOS:");
-        System.out.printf("  • Tiempo total:                %d ms (%.2f s)%n",
+        println("\n⏱️  TIEMPOS:");
+        printf("  • Tiempo total:                %d ms (%.2f s)%n",
                 r.totalTimeMs, r.totalTimeMs / 1000.0);
-        System.out.printf("  • Tiempo promedio/conexión:    %.2f ms%n", r.avgConnectionTimeMs);
+        printf("  • Tiempo promedio/conexión:    %.2f ms%n", r.avgConnectionTimeMs);
 
-        System.out.println("\n🚀 THROUGHPUT:");
-        System.out.printf("  • Conexiones/segundo:          %.2f%n", r.throughputPerSec);
+        println("\n🚀 THROUGHPUT:");
+        printf("  • Conexiones/segundo:          %.2f%n", r.throughputPerSec);
 
-        System.out.println("\n✅ VERIFICACIÓN:");
+        println("\n✅ VERIFICACIÓN:");
         if (r.successCount == numClients)
-            System.out.println("  ✓ ¡ÉXITO! Todas las " + numClients + " conexiones fueron exitosas");
+            println("  ✓ ¡ÉXITO! Todas las " + numClients + " conexiones fueron exitosas");
         else if (r.getSuccessRate(numClients) >= 95)
-            System.out.println("  ✓ Excelente: más del 95% de conexiones exitosas");
+            println("  ✓ Excelente: más del 95% de conexiones exitosas");
         else if (r.getSuccessRate(numClients) >= 80)
-            System.out.println("  ⚠ Aceptable: más del 80% de conexiones exitosas");
+            println("  ⚠ Aceptable: más del 80% de conexiones exitosas");
         else
-            System.out.println("  ❌ Bajo: menos del 80% de conexiones exitosas");
+            println("  ❌ Bajo: menos del 80% de conexiones exitosas");
     }
 
     // -------------------------------------------------------------------------
@@ -311,41 +359,40 @@ public class PerformanceTestComparativa {
                 ? (throughputLoss / plain.throughputPerSec) * 100 : 0;
         double totalDelta    = ssl.totalTimeMs - plain.totalTimeMs;
 
-        System.out.println("\n╔═════════════════════════════════════════════════════════════╗");
-        System.out.println("║                   RESULTADOS COMPARATIVOS                   ║");
-        System.out.println("╚═════════════════════════════════════════════════════════════╝\n");
+        println("\n╔═════════════════════════════════════════════════════════════╗");
+        println("║                   RESULTADOS COMPARATIVOS                   ║");
+        println("╚═════════════════════════════════════════════════════════════╝\n");
 
-        System.out.printf("%-32s %12s %12s%n", "Métrica", "Con SSL", "Sin SSL");
-        System.out.println("-".repeat(58));
-        System.out.printf("%-32s %11d ms %11d ms%n",
+        printf("%-32s %12s %12s%n", "Métrica", "Con SSL", "Sin SSL");
+        println("-".repeat(58));
+        printf("%-32s %11d ms %11d ms%n",
                 "Tiempo total",          ssl.totalTimeMs,         plain.totalTimeMs);
-        System.out.printf("%-32s %11.2f ms %11.2f ms%n",
+        printf("%-32s %11.2f ms %11.2f ms%n",
                 "Tiempo medio/conexión", ssl.avgConnectionTimeMs, plain.avgConnectionTimeMs);
-        System.out.printf("%-32s %10.2f c/s %10.2f c/s%n",
+        printf("%-32s %10.2f c/s %10.2f c/s%n",
                 "Throughput (conex/s)",  ssl.throughputPerSec,    plain.throughputPerSec);
-        System.out.printf("%-32s %12d %12d%n",
+        printf("%-32s %12d %12d%n",
                 "Conexiones exitosas",   ssl.successCount,        plain.successCount);
-        System.out.printf("%-32s %12d %12d%n",
+        printf("%-32s %12d %12d%n",
                 "Reintentos",            ssl.retryCount,          plain.retryCount);
-        System.out.println("-".repeat(58));
-        System.out.printf("%-32s %+.2f ms%n",   "Δ Tiempo medio/conexión", overheadTime);
-        System.out.printf("%-32s %+d ms%n",      "Δ Tiempo total",          (long) totalDelta);
-        System.out.printf("%-32s %+.2f c/s%n",  "Δ Throughput",            -throughputLoss);
-        System.out.println("=".repeat(58));
-        System.out.printf("  📊 Overhead TLS 1.3:  %+.1f%% en tiempo medio por conexión%n", overheadPct);
-        System.out.printf("  📊 Coste en throughput: %.1f%% de reducción%n", throughputPct);
-        System.out.println("=".repeat(58));
+        println("-".repeat(58));
+        printf("%-32s %+.2f ms%n",   "Δ Tiempo medio/conexión", overheadTime);
+        printf("%-32s %+d ms%n",      "Δ Tiempo total",          (long) totalDelta);
+        printf("%-32s %+.2f c/s%n",  "Δ Throughput",            -throughputLoss);
+        println("=".repeat(58));
+        printf("  📊 Overhead TLS 1.3:  %+.1f%% en tiempo medio por conexión%n", overheadPct);
+        printf("  📊 Coste en throughput: %.1f%% de reducción%n", throughputPct);
+        println("=".repeat(58));
 
-        System.out.println("\n╔═════════════════════════════════════════════════════════════╗");
-        System.out.println("║              PROTOCOLO TLS 1.3 VERIFICADO                   ║");
-        System.out.println("╚═════════════════════════════════════════════════════════════╝");
-        System.out.println("  • Todas las conexiones SSL usaron TLS 1.3");
-        System.out.println("  • Cipher suites: AES-256-GCM / ChaCha20-Poly1305");
-        System.out.println("  • Forward secrecy garantizada");
-        System.out.printf( "  • Overhead aceptable (<15%%): %s%n",
+        println("\n╔═════════════════════════════════════════════════════════════╗");
+        println("║              PROTOCOLO TLS 1.3 VERIFICADO                   ║");
+        println("╚═════════════════════════════════════════════════════════════╝");
+        println("  • Todas las conexiones SSL usaron TLS 1.3");
+        println("  • Cipher suites: AES-256-GCM / ChaCha20-Poly1305");
+        println("  • Forward secrecy garantizada");
+        printf( "  • Overhead aceptable (<15%%): %s%n",
                 overheadPct <= 15 ? "✅ SÍ (" + String.format("%.1f", overheadPct) + "%)"
                                   : "⚠️  NO (" + String.format("%.1f", overheadPct) + "%)");
-        System.out.println();
     }
 
     // -------------------------------------------------------------------------
