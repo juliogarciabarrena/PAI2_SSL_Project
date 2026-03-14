@@ -15,6 +15,8 @@ REM
 REM Uso: scripts\setup.bat
 REM =============================================================================
 
+@echo off
+chcp 65001 >nul
 setlocal enabledelayedexpansion
 
 set CERTS_DIR=certs
@@ -38,7 +40,7 @@ echo [VERIFICACION] Comprobando Maven...
 where mvn >nul 2>&1
 if errorlevel 1 (
     echo.
-    echo ❌ ERROR: Maven no está instalado o no está en PATH
+    echo [ERROR] Maven no está instalado o no está en PATH
     echo.
     echo Soluciones:
     echo   1. Descarga Maven desde: https://maven.apache.org/download.cgi
@@ -50,7 +52,7 @@ if errorlevel 1 (
     pause
     exit /b 1
 )
-echo ✓ Maven encontrado
+echo [OK] Maven encontrado
 echo.
 
 REM Obtener ruta del proyecto
@@ -71,11 +73,11 @@ call mvn clean -q
 
 if errorlevel 1 (
     echo.
-    echo ❌ ERROR: mvn clean falló
+    echo [ERROR] mvn clean falló
     pause
     exit /b 1
 )
-echo ✓ mvn clean completado
+echo [OK] mvn clean completado
 echo.
 
 REM ============================================================================
@@ -90,14 +92,14 @@ call mvn install -DskipTests -q
 
 if errorlevel 1 (
     echo.
-    echo ❌ ERROR: mvn install falló
+    echo [ERROR] mvn install falló
     echo.
     echo Verifica que pom.xml existe y es válido
     echo.
     pause
     exit /b 1
 )
-echo ✓ mvn install completado
+echo [OK] mvn install completado
 echo.
 
 REM ============================================================================
@@ -145,7 +147,7 @@ if not exist "%KEYSTORE%" (
     echo ❌ ERROR
     pause
 )
-echo ✓ Keystore creado: %KEYSTORE%
+echo [OK] Keystore creado: %KEYSTORE%
 echo.
 
 echo [3b/5] Exportando certificado público del servidor...
@@ -156,7 +158,7 @@ keytool -exportcert ^
     -storepass "%PASSWORD%" ^
     -noprompt
 
-echo ✓ Certificado exportado: %CERT_FILE%
+echo [OK] Certificado exportado: %CERT_FILE%
 echo.
 
 echo [3c/5] Creando truststore para el cliente...
@@ -167,7 +169,7 @@ keytool -importcert ^
     -storepass "%PASSWORD%" ^
     -noprompt
 
-echo ✓ Truststore creado: %TRUSTSTORE%
+echo [OK] Truststore creado: %TRUSTSTORE%
 echo.
 
 REM Verificar keystores
@@ -188,7 +190,7 @@ call mvn compile -q
 
 if errorlevel 1 (
     echo.
-    echo ❌ ERROR: mvn compile falló
+    echo [ERROR] mvn compile falló
     echo.
     echo Verifica que:
     echo   - El código Java es válido
@@ -197,7 +199,7 @@ if errorlevel 1 (
     pause
     exit /b 1
 )
-echo ✓ mvn compile completado
+echo [OK] mvn compile completado
 echo.
 
 REM ============================================================================
@@ -212,38 +214,38 @@ call mvn package -DskipTests -q
 
 if errorlevel 1 (
     echo.
-    echo ❌ ERROR: mvn package falló
+    echo [ERROR] mvn package falló
     echo.
     pause
     exit /b 1
 )
-echo ✓ mvn package completado
+echo [OK] mvn package completado
 echo.
 
 REM ============================================================================
 REM RESUMEN FINAL
 REM ============================================================================
 echo ================================================
-echo    ✅ SETUP COMPLETADO EXITOSAMENTE
+echo    SETUP COMPLETADO EXITOSAMENTE
 echo ================================================
 echo.
 echo RESUMEN:
 echo.
 echo [Maven]
-echo   ✓ mvn clean      — Limpieza completada
-echo   ✓ mvn install    — Dependencias instaladas
-echo   ✓ mvn compile    — Código compilado
-echo   ✓ mvn package    — Aplicación empaquetada
+echo   mvn clean      — Limpieza completada
+echo   mvn install    — Dependencias instaladas
+echo   mvn compile    — Código compilado
+echo   mvn package    — Aplicación empaquetada
 echo.
 echo [PKI]
-echo   ✓ keystore.jks   — Servidor (privado)
-echo   ✓ truststore.jks — Cliente
-echo   ✓ server.cer     — Certificado público
+echo   keystore.jks   — Servidor (privado)
+echo   truststore.jks — Cliente
+echo   server.cer     — Certificado público
 echo.
 echo [Archivos]
-echo   📁 target/classes              — Clases compiladas
-echo   📁 target/dependency-jars      — Dependencias
-echo   📁 certs                       — Certificados PKI
+echo   target/classes              — Clases compiladas
+echo   target/dependency-jars      — Dependencias
+echo   certs                       — Certificados PKI
 echo.
 echo [Pasos Siguientes]
 echo   1. Terminal 1: scripts\run_server_simple.bat

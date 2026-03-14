@@ -12,7 +12,7 @@ CLASSPATH="src:libs/sqlite-jdbc.jar:libs/jbcrypt-0.4.jar"
 
 # Verificar que el keystore existe
 if [ ! -f "$KEYSTORE" ]; then
-    echo "❌ Error: No se encuentra $KEYSTORE"
+    echo " Error: No se encuentra $KEYSTORE"
     echo "   Ejecuta primero: bash scripts/setup.sh"
     exit 1
 fi
