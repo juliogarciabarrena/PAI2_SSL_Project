@@ -47,7 +47,7 @@ public class ClienteSSL {
             client.connect(host, port);
             client.interactiveMenu();
         } catch (IOException e) {
-            System.err.println("❌ Error de conexión: " + e.getMessage());
+            System.err.println("[ERROR] Error de conexión: " + e.getMessage());
             System.exit(1);
         }
     }
@@ -62,8 +62,8 @@ public class ClienteSSL {
      */
     public void connect(String host, int port) throws IOException {
         System.out.println("╔══════════════════════════════════════════════╗");
-        System.out.println("║   Cliente VPN SSL — Universidad Pública      ║");
-        System.out.println("║   Protocolo: TLS 1.3  |  Puerto: " + port + "            ║");
+        System.out.println("║   Cliente VPN SSL   Universidad Pública      ║");
+        System.out.println("║   Protocolo: TLS 1.3  |  Puerto: " + port + "        ║");
         System.out.println("╚══════════════════════════════════════════════╝");
         System.out.println("[Cliente] Conectando a " + host + ":" + port + "...\n");
 
@@ -82,7 +82,7 @@ public class ClienteSSL {
 
             // Log de conexión exitosa
             SSLSession session = socket.getSession();
-            System.out.printf("[Cliente] ✅ Conexión SSL establecida:%n");
+            System.out.printf("[Cliente] [OK] Conexión SSL establecida:%n");
             System.out.printf("    Protocolo: %s%n", session.getProtocol());
             System.out.printf("    Cipher Suite: %s%n", session.getCipherSuite());
             System.out.printf("    Peer Principal: %s%n%n", session.getPeerPrincipal());
@@ -99,7 +99,7 @@ public class ClienteSSL {
             System.out.println("[Cliente] Escribe 'help' para ver los comandos disponibles.\n");
 
         } catch (IOException e) {
-            System.err.println("[Cliente] ❌ No se pudo conectar al servidor: " + e.getMessage());
+            System.err.println("[Cliente] [ERROR] No se pudo conectar al servidor: " + e.getMessage());
             throw e;
         }
     }
@@ -144,7 +144,6 @@ public class ClienteSSL {
                             ? input.substring(5)
                             : input.substring(4);
                     handleMessage(msg);
-
                 }else if (input.startsWith("history")) {
                     String args = input.length() > 7 ? input.substring(8) : "";
                     handleHistory(args.split(" "));
@@ -155,11 +154,11 @@ public class ClienteSSL {
                 } else if (input.equalsIgnoreCase("clear")) {
                     clearScreen();
                 } else {
-                    System.out.println("❌ Comando desconocido. Escribe 'help' para ayuda.\n");
+                    System.out.println("[ERROR] Comando desconocido. Escribe 'help' para ayuda.\n");
                 }
             }
         } catch (Exception e) {
-            System.err.println("[Cliente] ❌ Error durante interacción: " + e.getMessage());
+            System.err.println("[Cliente] [ERROR] Error durante interacción: " + e.getMessage());
         } finally {
             disconnect();
             scanner.close();
@@ -172,12 +171,12 @@ public class ClienteSSL {
 
     private void handleHistory(String[] split) {
         if (split.length == 0) {
-            System.out.println("📋 Uso: history [username] [limit]\n");
+            System.out.println("Uso: history [username] [limit]\n");
             return;
         }
 
         if (loggedUser == null) {
-            System.out.println("❌ No autenticado. Debes hacer LOGIN primero.\n");
+            System.out.println("[ERROR] No autenticado. Debes hacer LOGIN primero.\n");
             return;
         }
 
@@ -191,7 +190,7 @@ public class ClienteSSL {
         } else if (split.length == 2) {
             cmd = String.format("HISTORY|%s|%s", split[0], split[1]);
         } else {
-            System.out.println("❌ Formato incorrecto. Uso: history [username] [limit]\n");
+            System.out.println("[ERROR] Formato incorrecto. Uso: history [username] [limit]\n");
             return;
         }
 
@@ -201,7 +200,7 @@ public class ClienteSSL {
             String firstLine = in.readLine();
             
             if (firstLine == null) {
-                System.out.println("⚠️  Desconexión inesperada.\n");
+                System.out.println("[WARN]  Desconexión inesperada.\n");
                 return;
             }
 
@@ -211,7 +210,7 @@ public class ClienteSSL {
                 int count = Integer.parseInt(countParts[1]);
 
                 // Leer los siguientes 'count' mensajes
-                System.out.println("📋 Historial (" + count + " mensaje" + (count != 1 ? "s" : "") + "):");
+                System.out.println("Historial (" + count + " mensaje" + (count != 1 ? "s" : "") + "):");
                 for (int i = 0; i < count; i++) {
                     String msg = in.readLine();
                     if (msg != null) {
@@ -220,12 +219,12 @@ public class ClienteSSL {
                 }
                 System.out.println();
             } else if (firstLine.startsWith("ERROR|")) {
-                System.out.println("❌ " + firstLine.substring(6) + "\n");
+                System.out.println("[ERROR] " + firstLine.substring(6) + "\n");
             } else {
-                System.out.println("⚠️  Respuesta inesperada: " + firstLine + "\n");
+                System.out.println("[WARN]  Respuesta inesperada: " + firstLine + "\n");
             }
         } catch (IOException e) {
-            System.err.println("[Cliente] ❌ Error al obtener historial: " + e.getMessage());
+            System.err.println("[Cliente] [ERROR] Error al obtener historial: " + e.getMessage());
         }
     }
 
@@ -234,13 +233,13 @@ public class ClienteSSL {
      */
     private void handleRegisterInteractive(String args) {
         if (args.isEmpty()) {
-            System.out.println("📋 Uso: register <usuario> <contraseña>\n");
+            System.out.println("Uso: register <usuario> <contraseña>\n");
             return;
         }
 
         String[] parts = args.split(" ", 2);
         if (parts.length < 2) {
-            System.out.println("❌ Debes proporcionar usuario y contraseña.\n");
+            System.out.println("[ERROR] Debes proporcionar usuario y contraseña.\n");
             return;
         }
 
@@ -251,11 +250,11 @@ public class ClienteSSL {
         String response = sendCommand(cmd);
 
         if (response.startsWith("OK|")) {
-            System.out.println("✅ " + response.substring(3) + "\n");
+            System.out.println("[OK]" + response.substring(3) + "\n");
         } else if (response.startsWith("ERROR|")) {
-            System.out.println("❌ " + response.substring(6) + "\n");
+            System.out.println("[ERROR]" + response.substring(6) + "\n");
         } else {
-            System.out.println("⚠️  Respuesta inesperada: " + response + "\n");
+            System.out.println("[WARN]  Respuesta inesperada: " + response + "\n");
         }
     }
 
@@ -264,18 +263,18 @@ public class ClienteSSL {
      */
     private void handleLoginInteractive(String args) {
         if (loggedUser != null) {
-            System.out.println("❌ Ya tienes una sesión activa como: " + loggedUser + "\n");
+            System.out.println("[ERROR] Ya tienes una sesión activa como: " + loggedUser + "\n");
             return;
         }
 
         if (args.isEmpty()) {
-            System.out.println("📋 Uso: login <usuario> <contraseña>\n");
+            System.out.println("Uso: login <usuario> <contraseña>\n");
             return;
         }
 
         String[] parts = args.split(" ", 2);
         if (parts.length < 2) {
-            System.out.println("❌ Debes proporcionar usuario y contraseña.\n");
+            System.out.println("[ERROR] Debes proporcionar usuario y contraseña.\n");
             return;
         }
 
@@ -287,11 +286,11 @@ public class ClienteSSL {
 
         if (response.startsWith("OK|")) {
             loggedUser = username;
-            System.out.println("✅ " + response.substring(3) + "\n");
+            System.out.println("[OK] " + response.substring(3) + "\n");
         } else if (response.startsWith("ERROR|")) {
-            System.out.println("❌ " + response.substring(6) + "\n");
+            System.out.println("[ERROR] " + response.substring(6) + "\n");
         } else {
-            System.out.println("⚠️  Respuesta inesperada: " + response + "\n");
+            System.out.println("[WARN]  Respuesta inesperada: " + response + "\n");
         }
     }
 
@@ -300,18 +299,18 @@ public class ClienteSSL {
      */
     private void handleMessage(String content) {
         if (loggedUser == null) {
-            System.out.println("❌ No autenticado. Debes hacer LOGIN primero.\n");
+            System.out.println("[ERROR] No autenticado. Debes hacer LOGIN primero.\n");
             return;
         }
 
         if (content.isEmpty()) {
-            System.out.println("❌ El mensaje no puede estar vacío.\n");
+            System.out.println("[ERROR] El mensaje no puede estar vacío.\n");
             return;
         }
 
         // Validar límite de 144 caracteres (RF-6)
         if (content.length() > 144) {
-            System.out.println("⚠️  El mensaje excede 144 caracteres. Se truncará.\n");
+            System.out.println("[WARN]  El mensaje excede 144 caracteres. Se truncará.\n");
             content = content.substring(0, 144);
         }
 
@@ -319,11 +318,11 @@ public class ClienteSSL {
         String response = sendCommand(cmd);
 
         if (response.startsWith("OK|")) {
-            System.out.println("✅ " + response.substring(3) + "\n");
+            System.out.println("[OK] " + response.substring(3) + "\n");
         } else if (response.startsWith("ERROR|")) {
-            System.out.println("❌ " + response.substring(6) + "\n");
+            System.out.println("[ERROR] " + response.substring(6) + "\n");
         } else {
-            System.out.println("⚠️  Respuesta inesperada: " + response + "\n");
+            System.out.println("[WARN]  Respuesta inesperada: " + response + "\n");
         }
     }
 
@@ -332,19 +331,19 @@ public class ClienteSSL {
      */
     private void handleLogout() {
         if (loggedUser == null) {
-            System.out.println("❌ No hay sesión activa.\n");
+            System.out.println("[ERROR] No hay sesión activa.\n");
             return;
         }
 
         String response = sendCommand("LOGOUT");
 
         if (response.startsWith("OK|")) {
-            System.out.println("✅ " + response.substring(3) + "\n");
+            System.out.println("[OK] " + response.substring(3) + "\n");
             loggedUser = null;
         } else if (response.startsWith("ERROR|")) {
-            System.out.println("❌ " + response.substring(6) + "\n");
+            System.out.println("[ERROR] " + response.substring(6) + "\n");
         } else {
-            System.out.println("⚠️  Respuesta inesperada: " + response + "\n");
+            System.out.println("[WARN]  Respuesta inesperada: " + response + "\n");
         }
     }
 
@@ -367,7 +366,7 @@ public class ClienteSSL {
             return response != null ? response : "ERROR|Desconexión inesperada";
 
         } catch (IOException e) {
-            System.err.println("[Cliente] ❌ Error al comunicarse: " + e.getMessage());
+            System.err.println("[Cliente] [ERROR] Error al comunicarse: " + e.getMessage());
             return "ERROR|" + e.getMessage();
         }
     }
@@ -380,33 +379,33 @@ public class ClienteSSL {
      * Muestra la ayuda de comandos disponibles.
      */
     private void showHelp() {
-        System.out.println("\n╔════════════════════════════════════════════════════════════════╗");
-        System.out.println("║                   COMANDOS DISPONIBLES                         ║");
-        System.out.println("╠════════════════════════════════════════════════════════════════╣");
-        System.out.println("║  AUTENTICACIÓN:                                                ║");
-        System.out.println("║    register <usuario> <contraseña>   - Registrar nuevo usuario ║");
-        System.out.println("║    login <usuario> <contraseña>      - Iniciar sesión         ║");
-        System.out.println("║    logout                            - Cerrar sesión          ║");
-        System.out.println("║                                                               ║");
-        System.out.println("║  MENSAJES:                                                    ║");
-        System.out.println("║    send <mensaje>                    - Enviar mensaje         ║");
+        System.out.println("\n╔═══════════════════════════════════════════════════════════════════╗");
+        System.out.println("║                   COMANDOS DISPONIBLES                            ║");
+        System.out.println("╠═══════════════════════════════════════════════════════════════════╣");
+        System.out.println("║  AUTENTICACIÓN:                                                   ║");
+        System.out.println("║    register <usuario> <contraseña>   - Registrar nuevo usuario    ║");
+        System.out.println("║    login <usuario> <contraseña>      - Iniciar sesión             ║");
+        System.out.println("║    logout                            - Cerrar sesión              ║");
+        System.out.println("║                                                                   ║");
+        System.out.println("║  MENSAJES:                                                        ║");
+        System.out.println("║    send <mensaje>                    - Enviar mensaje             ║");
         System.out.println("║    history <username> <limit>        - Ver historial de mensajes  ║");
-        System.out.println("║                                                               ║");
-        System.out.println("║                                                               ║");
-        System.out.println("║  UTILIDADES:                                                  ║");
-        System.out.println("║    status                            - Ver estado actual      ║");
-        System.out.println("║    clear                             - Limpiar pantalla       ║");
-        System.out.println("║    help                              - Mostrar esta ayuda     ║");
-        System.out.println("║    exit, quit                        - Salir                  ║");
-        System.out.println("╚════════════════════════════════════════════════════════════════╝\n");
+        System.out.println("║                                                                   ║");
+        System.out.println("║                                                                   ║");
+        System.out.println("║  UTILIDADES:                                                      ║");
+        System.out.println("║    status                            - Ver estado actual          ║");
+        System.out.println("║    clear                             - Limpiar pantalla           ║");
+        System.out.println("║    help                              - Mostrar esta ayuda         ║");
+        System.out.println("║    exit, quit                        - Salir                      ║");
+        System.out.println("╚═══════════════════════════════════════════════════════════════════╝\n");
     }
 
     /**
      * Muestra el estado actual del cliente.
      */
     private void showStatus() {
-        System.out.println("\n📊 Estado del cliente:");
-        System.out.println("  • Conectado: " + (socket != null && socket.isConnected() ? "✅ Sí" : "❌ No"));
+        System.out.println("\nEstado del cliente:");
+        System.out.println("  • Conectado: " + (socket != null && socket.isConnected() ? " Sí" : " No"));
         if (socket != null && socket.isConnected()) {
             try {
                 SSLSession session = socket.getSession();
@@ -416,7 +415,7 @@ public class ClienteSSL {
                 System.out.println("  • Error al obtener información SSL");
             }
         }
-        System.out.println("  • Usuario autenticado: " + (loggedUser != null ? "✅ " + loggedUser : "❌ No"));
+        System.out.println("  • Usuario autenticado: " + (loggedUser != null ? " Sí " + loggedUser : " No"));
         System.out.println();
     }
 

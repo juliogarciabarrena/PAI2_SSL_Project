@@ -29,14 +29,14 @@ set CERTS_DIR=%PROJECT_ROOT%\certs
 
 REM Verificar directorios
 if not exist "%CLASSES_DIR%\ClienteSSL.class" (
-    echo ❌ ERROR: No se encuentra ClienteSSL.class
+    echo ERROR: No se encuentra ClienteSSL.class
     echo           Necesitas compilar primero con: compile_cliente.bat
     pause
     exit /b 1
 )
 
 if not exist "%CERTS_DIR%\truststore.jks" (
-    echo ❌ ERROR: No se encuentra certs\truststore.jks
+    echo ERROR: No se encuentra certs\truststore.jks
     pause
     exit /b 1
 )
@@ -62,7 +62,7 @@ java -Djavax.net.ssl.trustStore="%CERTS_DIR%\truststore.jks" ^
 
 if errorlevel 1 (
     echo.
-    echo ❌ Error al conectar
+    echo Error al conectar
     echo    - Verifica que ServidorSSL esta ejecutándose
     echo    - Host correcto: %HOST%
     echo    - Puerto correcto: %PORT%
