@@ -1,0 +1,30 @@
+# =============================================================================
+# .gitattributes — Control de encoding y saltos de línea por tipo de fichero
+# =============================================================================
+
+# Por defecto: normalizar saltos de linea al hacer checkout
+* text=auto
+
+# Scripts Windows (.bat) — CRLF obligatorio, encoding ASCII
+# cmd.exe requiere CRLF y no soporta UTF-8 sin BOM
+*.bat text eol=crlf working-tree-encoding=CP1252
+
+# Scripts Unix (.sh) — LF obligatorio
+*.sh text eol=lf
+
+# Ficheros Java — LF
+*.java text eol=lf
+
+# Ficheros de configuracion — LF
+*.xml  text eol=lf
+*.properties text eol=lf
+*.md   text eol=lf
+
+# Ficheros binarios — no tocar
+*.jks  binary
+*.cer  binary
+*.jar  binary
+*.class binary
+*.db   binary
+*.png  binary
+*.jpg  binary
