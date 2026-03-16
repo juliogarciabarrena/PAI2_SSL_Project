@@ -1,22 +1,17 @@
 @echo off
 REM =============================================================================
-REM setup.bat — Generación automática de certificados para VPN SSL (Windows)
+REM setup.bat - Generacion de certificados y compilacion para VPN SSL (Windows)
 REM
 REM Este script realiza un setup completo:
-REM   1. mvn clean       — Limpia artefactos previos
-REM   2. mvn install     — Descarga e instala dependencias
-REM   3. Genera PKI      — Crea certificados (keystore/truststore)
-REM   4. mvn compile     — Compila el código fuente
-REM   5. mvn package     — Empaqueta en JAR
-REM
-REM Ejecutar ANTES de arrancar el servidor (Día 1, mañana).
-REM Genera keystore.jks (servidor) y truststore.jks (cliente).
+REM   1. mvn clean       - Limpia artefactos previos
+REM   2. mvn install     - Descarga e instala dependencias
+REM   3. Genera PKI      - Crea certificados (keystore/truststore)
+REM   4. mvn compile     - Compila el codigo fuente
+REM   5. mvn package     - Empaqueta en JAR
 REM
 REM Uso: scripts\setup.bat
 REM =============================================================================
 
-@echo off
-chcp 65001 >nul
 setlocal enabledelayedexpansion
 
 set CERTS_DIR=certs
@@ -30,24 +25,24 @@ set KEY_SIZE=2048
 set DNAME=CN=universidad.local, OU=InSEGUS, O=Universidad de Sevilla, L=Sevilla, ST=Andalucia, C=ES
 
 echo ================================================
-echo    SETUP COMPLETO — VPN SSL TLS 1.3
+echo    SETUP COMPLETO - VPN SSL TLS 1.3
 echo    Maven + PKI + Compilacion
 echo ================================================
 echo.
 
-REM Verificar que Maven está instalado
+REM Verificar que Maven esta instalado
 echo [VERIFICACION] Comprobando Maven...
 where mvn >nul 2>&1
 if errorlevel 1 (
     echo.
-    echo [ERROR] Maven no está instalado o no está en PATH
+    echo [ERROR] Maven no esta instalado o no esta en PATH
     echo.
     echo Soluciones:
     echo   1. Descarga Maven desde: https://maven.apache.org/download.cgi
-    echo   2. O instálalo con: choco install maven
+    echo   2. O instalalo con: choco install maven
     echo   3. O con scoop: scoop install maven
     echo.
-    echo Después reinicia esta ventana de comandos.
+    echo Despues reinicia esta ventana de comandos.
     echo.
     pause
     exit /b 1
@@ -73,7 +68,7 @@ call mvn clean -q
 
 if errorlevel 1 (
     echo.
-    echo [ERROR] mvn clean falló
+    echo [ERROR] mvn clean fallo
     pause
     exit /b 1
 )
@@ -92,9 +87,9 @@ call mvn install -DskipTests -q
 
 if errorlevel 1 (
     echo.
-    echo [ERROR] mvn install falló
+    echo [ERROR] mvn install fallo
     echo.
-    echo Verifica que pom.xml existe y es válido
+    echo Verifica que pom.xml existe y es valido
     echo.
     pause
     exit /b 1
@@ -105,30 +100,18 @@ echo.
 REM ============================================================================
 REM FASE 3: Crear directorio de certificados
 REM ============================================================================
-echo [3/5] Generando PKI (Infraestructura de Clave Pública)
+echo [3/5] Generando PKI (Infraestructura de Clave Publica)
 echo.
 
-REM Crear directorio certs si no existe
 if not exist "%CERTS_DIR%" (
     echo       Creando directorio: %CERTS_DIR%
     mkdir "%CERTS_DIR%"
 )
 
-REM Eliminar keystores anteriores si existen
-if exist "%KEYSTORE%" (
-    echo       Eliminando keystore anterior...
-    del /f /q "%KEYSTORE%"
-)
-if exist "%TRUSTSTORE%" (
-    echo       Eliminando truststore anterior...
-    del /f /q "%TRUSTSTORE%"
-)
-if exist "%CERT_FILE%" (
-    echo       Eliminando certificado anterior...
-    del /f /q "%CERT_FILE%"
-)
+if exist "%KEYSTORE%"   del /f /q "%KEYSTORE%"
+if exist "%TRUSTSTORE%" del /f /q "%TRUSTSTORE%"
+if exist "%CERT_FILE%"  del /f /q "%CERT_FILE%"
 
-echo.
 echo [3a/5] Generando keystore del servidor (RSA %KEY_SIZE%, %VALIDITY% dias)...
 
 keytool -genkeypair ^
@@ -144,20 +127,20 @@ keytool -genkeypair ^
     -noprompt
 
 if not exist "%KEYSTORE%" (
-    echo ❌ ERROR
+    echo [ERROR] No se pudo crear el keystore
     pause
+    exit /b 1
 )
 echo [OK] Keystore creado: %KEYSTORE%
 echo.
 
-echo [3b/5] Exportando certificado público del servidor...
+echo [3b/5] Exportando certificado publico del servidor...
 keytool -exportcert ^
     -keystore "%KEYSTORE%" ^
     -alias "%ALIAS%" ^
     -file "%CERT_FILE%" ^
     -storepass "%PASSWORD%" ^
     -noprompt
-
 echo [OK] Certificado exportado: %CERT_FILE%
 echo.
 
@@ -168,13 +151,10 @@ keytool -importcert ^
     -file "%CERT_FILE%" ^
     -storepass "%PASSWORD%" ^
     -noprompt
-
 echo [OK] Truststore creado: %TRUSTSTORE%
 echo.
 
-REM Verificar keystores
-echo [VERIFICACION PKI]
-echo Contenido del keystore:
+echo [VERIFICACION PKI] Contenido del keystore:
 keytool -list -keystore "%KEYSTORE%" -storepass "%PASSWORD%"
 echo.
 
@@ -182,7 +162,7 @@ REM ============================================================================
 REM FASE 4: Maven Compile
 REM ============================================================================
 echo [4/5] Ejecutando: mvn compile
-echo       Compilando código fuente...
+echo       Compilando codigo fuente...
 echo.
 
 cd /d "%PROJECT_ROOT%"
@@ -190,11 +170,8 @@ call mvn compile -q
 
 if errorlevel 1 (
     echo.
-    echo [ERROR] mvn compile falló
-    echo.
-    echo Verifica que:
-    echo   - El código Java es válido
-    echo   - Las dependencias se descargaron correctamente
+    echo [ERROR] mvn compile fallo
+    echo Verifica que el codigo Java es valido y las dependencias estan instaladas.
     echo.
     pause
     exit /b 1
@@ -206,7 +183,7 @@ REM ============================================================================
 REM FASE 5: Maven Package
 REM ============================================================================
 echo [5/5] Ejecutando: mvn package
-echo       Empaquetando aplicación...
+echo       Empaquetando aplicacion...
 echo.
 
 cd /d "%PROJECT_ROOT%"
@@ -214,8 +191,7 @@ call mvn package -DskipTests -q
 
 if errorlevel 1 (
     echo.
-    echo [ERROR] mvn package falló
-    echo.
+    echo [ERROR] mvn package fallo
     pause
     exit /b 1
 )
@@ -229,35 +205,33 @@ echo ================================================
 echo    SETUP COMPLETADO EXITOSAMENTE
 echo ================================================
 echo.
-echo RESUMEN:
-echo.
 echo [Maven]
-echo   mvn clean      — Limpieza completada
-echo   mvn install    — Dependencias instaladas
-echo   mvn compile    — Código compilado
-echo   mvn package    — Aplicación empaquetada
+echo   mvn clean      - Limpieza completada
+echo   mvn install    - Dependencias instaladas
+echo   mvn compile    - Codigo compilado
+echo   mvn package    - Aplicacion empaquetada
 echo.
-echo [PKI]
-echo   keystore.jks   — Servidor (privado)
-echo   truststore.jks — Cliente
-echo   server.cer     — Certificado público
+echo [PKI - Certificados en certs\]
+echo   keystore.jks        - Servidor (clave privada)
+echo   truststore.jks      - Cliente (certificado publico)
+echo   server.cer          - Certificado publico exportado
 echo.
-echo [Archivos]
-echo   target/classes              — Clases compiladas
-echo   target/dependency-jars      — Dependencias
-echo   certs                       — Certificados PKI
+echo [JARs en target\]
+echo   servidor-ssl.jar        - Servidor TLS 1.3
+echo   servidor-plain.jar      - Servidor TCP sin cifrado
+echo   performance-test.jar    - Test de rendimiento
+echo   cipher-suite-test.jar   - Test de cipher suites
 echo.
-echo [Pasos Siguientes]
-echo   1. Terminal 1: scripts\run_server_simple.bat
-echo   2. Terminal 2: scripts\run_client_simple.bat
-echo   3. Terminal 3: scripts\run_performance_test_simple.bat
+echo [Pasos siguientes]
+echo   1. Terminal 1: scripts\run_server.bat
+echo   2. Terminal 2: scripts\run_client.bat
+echo   3. Terminal 3: scripts\run_performance_test.bat
 echo.
-echo [Información PKI]
-echo   Contraseña: PAI2password
-echo   Alias: ssl
-echo   Validez: %VALIDITY% días
-echo.
+echo [PKI Info]
+echo   Password : PAI2password
+echo   Alias    : ssl
+echo   Validez  : %VALIDITY% dias
+echo   Tamano   : RSA %KEY_SIZE% bits
 echo ================================================
 echo.
-
 pause
