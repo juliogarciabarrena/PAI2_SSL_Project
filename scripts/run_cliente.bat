@@ -1,7 +1,7 @@
 @echo off
 REM ============================================================================
 REM Script para ejecutar ClienteSSL en Windows
-REM Requisito: ServidorSSL debe estar ejecutándose en otra terminal
+REM Requisito: ServidorSSL debe estar ejecutÃ¡ndose en otra terminal
 REM Uso: run_client.bat [host] [puerto]
 REM      Por defecto: localhost 8443
 REM ============================================================================
@@ -41,7 +41,7 @@ if not exist "%CERTS_DIR%\truststore.jks" (
     exit /b 1
 )
 
-echo [✓] Verificacion completada
+echo [âœ“] Verificacion completada
 echo     Proyecto: %PROJECT_ROOT%
 echo     Host:     %HOST%
 echo     Puerto:   %PORT%
@@ -49,7 +49,7 @@ echo.
 
 echo [+] Conectando al servidor...
 echo     Protocolo: TLS 1.3
-echo     Verifica que ServidorSSL este ejecutándose
+echo     Verifica que ServidorSSL este ejecutÃ¡ndose
 echo.
 
 REM Ejecutar cliente
@@ -63,7 +63,7 @@ java -Djavax.net.ssl.trustStore="%CERTS_DIR%\truststore.jks" ^
 if errorlevel 1 (
     echo.
     echo Error al conectar
-    echo    - Verifica que ServidorSSL esta ejecutándose
+    echo    - Verifica que ServidorSSL esta ejecutÃ¡ndose
     echo    - Host correcto: %HOST%
     echo    - Puerto correcto: %PORT%
     pause

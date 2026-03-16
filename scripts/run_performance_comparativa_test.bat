@@ -1,11 +1,11 @@
 @echo off
 REM =============================================================================
-REM run_performance_test.bat — Comparativa SSL vs Plain (300 conexiones)
+REM run_performance_test.bat â€” Comparativa SSL vs Plain (300 conexiones)
 REM
 REM Prerequisitos:
-REM   1. ServidorSSL   corriendo en 8443  →  run_server.bat
-REM   2. ServidorPlain corriendo en 8080  →  run_server_plain.bat
-REM   3. Haber compilado                  →  mvn package
+REM   1. ServidorSSL   corriendo en 8443  â†’  run_server.bat
+REM   2. ServidorPlain corriendo en 8080  â†’  run_server_plain.bat
+REM   3. Haber compilado                  â†’  mvn package
 REM =============================================================================
 
 setlocal enabledelayedexpansion
@@ -46,7 +46,7 @@ if not exist "%JAR%" (
 )
 
 echo ============================================================
-echo   Comparativa Conexiones Simultaneas — SSL vs Plain
+echo   Comparativa Conexiones Simultaneas â€” SSL vs Plain
 echo   SSL   : localhost:8443  ^(run_server.bat debe estar activo^)
 echo   Plain : localhost:8080  ^(run_server_plain.bat debe estar activo^)
 echo   Clientes: 300
@@ -56,7 +56,7 @@ echo.
 
 cd /d "%PROJECT_ROOT%"
 
-REM Ejecutar el test mostrando salida en pantalla Y guardando en el log simultáneamente
+REM Ejecutar el test mostrando salida en pantalla Y guardando en el log simultÃ¡neamente
 java -Dfile.encoding=UTF-8 ^
      -Djavax.net.ssl.trustStore="%CERTS_DIR%\truststore.jks" ^
      -Djavax.net.ssl.trustStorePassword="%PASSWORD%" ^

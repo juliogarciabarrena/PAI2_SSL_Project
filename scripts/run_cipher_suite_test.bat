@@ -1,9 +1,9 @@
 @echo off
 REM =============================================================================
-REM run_cipher_suite_test.bat — Prueba cada cipher suite contra el servidor SSL
+REM run_cipher_suite_test.bat - Prueba cada cipher suite contra el servidor SSL
 REM
 REM Requisitos:
-REM   1. ServidorSSL corriendo en localhost:8443  →  run_server_simple.bat
+REM   1. ServidorSSL corriendo en localhost:8443  ->  run_server_simple.bat
 REM   2. Archivos compilados en target\classes\
 REM =============================================================================
 
@@ -36,7 +36,7 @@ if not exist "%CLASSES_DIR%" (
 )
 
 echo ============================================================
-echo   Test de Cipher Suites — VPN SSL TLS 1.3
+echo   Test de Cipher Suites - VPN SSL TLS 1.3
 echo   Servidor: localhost:8443  (run_server_simple.bat debe estar activo)
 echo   Protocolo: TLSv1.3
 echo ============================================================
